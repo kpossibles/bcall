@@ -1,0 +1,3 @@
+#!/bin/sh
+
+sqlite3 ${BCALL_DIR}/bcall.db < ${BCALL_DIR}/dbsetup.sql

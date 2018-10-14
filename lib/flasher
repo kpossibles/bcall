@@ -1,0 +1,9 @@
+#!/bin/sh
+
+ARD_DIR="$BCALL_DIR/lib/arduino-1.8.6"
+TOOLS_DIR="$ARD_DIR/portable/packages/arduino/tools"
+BIN_PATH="$BCALL_DIR/build/bin/embedded.ino.bin"
+
+${TOOLS_DIR}/bossac/1.7.0/bossac -i -d --port=${1} -U true -i -e -w ${BIN_PATH} -R
+
+exit 0;

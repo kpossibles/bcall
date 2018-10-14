@@ -1,0 +1,6 @@
+#!/usr/bin/node
+require('phxerrors');
+const { is } = require('phxutils');
+const FrontEndCLI = require('./frontend');
+const path = is( process.argv[2], 'string', 'argv[2]');
+new FrontEndCLI(path);

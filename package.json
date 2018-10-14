@@ -1,0 +1,21 @@
+{
+  "name": "bcall2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Andrew Leitheiser <aleith@outlook.com>",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^4.1.4",
+    "node-geocoder": "^3.22.0",
+    "phxerrors": "git+https://oauth2:Qy63GycYbEanezz4yUDi@git.pdcbiz.com/utilities/phxerrors.git",
+    "phxutils": "git+https://oauth2:Qy63GycYbEanezz4yUDi@git.pdcbiz.com/utilities/phxutils.git",
+    "serialport": "^7.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2"
+  }
+}

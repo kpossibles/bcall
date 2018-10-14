@@ -1,0 +1,42 @@
+require('phxerrors');
+const { is, errSwitcher } = require('phxutils');
+const readline = require('readline');
+const net = require('net');
+const CLASSNAME = 'CLI';
+const sockPath = `${process.env.BCALL_DIR}/run`;
+
+module.exports = ( () => {
+  let _ = new WeakMap();
+  class CLI {
+    constructor() {
+      let me = {
+        cli : readline.createInterface( { 
+          input : process.stdin,
+          output : process.stdout,
+          prompt : ' bcall> '
+        } )
+      }
+      me.sock = net.createConnection(sockPath, () => {
+        console.log('Connected to BCALL daemon');
+        me.sock.setEncoding('utf8');
+      });
+      me.cli.on('close', () => {
+        console.log('exiting bcall');
+        process.exit(0);
+      });
+      me.cli.prompt();
+      me.cli.on('line', (line) => {
+        line = line.trim();
+        let args = [];
+        line.split(' ').forEach( (arg) => {
+          arg = arg.trim();
+          if( arg != '' ) args.push(arg);
+        });
+        console.log(args);
+        if( args.length != 0 ) me.sock.write( JSON.stringify( args ) );
+      });
+      _.set(this, me);
+    }
+  }
+  return CLI;
+})();

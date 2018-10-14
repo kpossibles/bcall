@@ -1,0 +1,20 @@
+#!/usr/bin/node
+const Monitor = require('../monitor');
+const MAX = {
+  mons : 10,
+  piezos : 10,
+  collisions : 100
+}
+let dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+let monMax = Math.random() * MAX.mons + 3;
+for( let i = 1; i <= monMax; i++ ) {
+  let mon = new Monitor( Monitor.mk({ locID : 1, name : `mon_${i}`, id : i }) );
+  let piezoMax = Math.random() * MAX.piezos + 3;
+  for( let j = 0; j <= piezoMax; j++ ) {
+    let dir = dirs[ Math.round( Math.random() * 7 ) ];
+    let el = {};
+    el.max = Math.round( Math.random() * 50 );
+    el.min = el.max - 10;
+    let piezo = mon.addPiezo({ fcdID : 1, name : `piezo_${i}.${j}`, dir : dir, pid : i, el : el} );
+  }
+}

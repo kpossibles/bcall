@@ -1,0 +1,14 @@
+#!/bin/sh
+
+ARD_DIR="$BCALL_DIR/lib/arduino-1.8.6"
+SKETCH="$BCALL_DIR/embedded/embedded.ino"
+PKG_DIR="$ARD_DIR/portable/packages"
+BUILD_DIR="$BCALL_DIR/build"
+LIB_DIR="$ARD_DIR/portable/sketchbook/libraries"
+TOOLS_DIR="$ARD_DIR/portable/packages/arduino/tools"
+
+
+
+#${ARD_DIR}/arduino-builder -dump-prefs -logger=machine -hardware ${ARD_DIR}/hardware -hardware ${PKG_DIR} -tools ${ARD_DIR}/tools-builder -tools ${ARD_DIR}/hardware/tools/avr -tools ${PKG_DIR} -built-in-libraries ${ARD_DIR}/libraries -libraries ${LIB_DIR} -fqbn=adafruit:samd:adafruit_feather_m0 -ide-version=10806 -build-path ${BUILD_DIR}/bin -warnings=all -build-cache ${BUILD_DIR}/cache -prefs=build.warn_data_percentage=75 -prefs=runtime.tools.CMSIS.path=${TOOLS_DIR}/CMSIS/4.5.0 -prefs=runtime.tools.openocd.path=${TOOLS_DIR}/openocd/0.9.0-arduino -prefs=runtime.tools.bossac.path=${TOOLS_DIR}/bossac/1.8.0-48-gb176eee -prefs=runtime.tools.arm-none-eabi-gcc.path=${TOOLS_DIR}/arm-none-eabi-gcc/4.8.3-2014q1 -prefs=runtime.tools.CMSIS-Atmel.path=${TOOLS_DIR}/CMSIS-Atmel/1.2.0 ${SKETCH}
+
+${ARD_DIR}/arduino-builder -compile -logger=machine -hardware ${ARD_DIR}/hardware -hardware ${PKG_DIR} -tools ${ARD_DIR}/tools-builder -tools ${ARD_DIR}/hardware/tools/avr -tools ${PKG_DIR} -built-in-libraries ${ARD_DIR}/libraries -libraries ${LIB_DIR} -fqbn=adafruit:samd:adafruit_feather_m0 -ide-version=10806 -build-path ${BUILD_DIR}/bin -warnings=all -build-cache ${BUILD_DIR}/cache -prefs=build.warn_data_percentage=75 -prefs=runtime.tools.CMSIS.path=${TOOLS_DIR}/CMSIS/4.5.0 -prefs=runtime.tools.openocd.path=${TOOLS_DIR}/openocd/0.9.0-arduino -prefs=runtime.tools.bossac.path=${TOOLS_DIR}/bossac/1.8.0-48-gb176eee -prefs=runtime.tools.arm-none-eabi-gcc.path=${TOOLS_DIR}/arm-none-eabi-gcc/4.8.3-2014q1 -prefs=runtime.tools.CMSIS-Atmel.path=${TOOLS_DIR}/CMSIS-Atmel/1.2.0 ${SKETCH}

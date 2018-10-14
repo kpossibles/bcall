@@ -1,0 +1,172 @@
+const Location = require('../location');
+const Piezo = require('../piezo');
+const { db } = require('../common');
+const mystmts = {
+  mk : db.prepare("INSERT INTO MONITOR (MON_MAC, MON_NAME, MON_DESC, LOC_ID) VALUES (@mac, @name, @desc, @locID)"),
+  byID : db.prepare("SELECT MON_ID, MON_MAC, MON_NAME, MON_DESC, LOC_ID, MON_IDENT, MON_ACTV, datetime(MON_CHKIN, 'localtime') as checkIn FROM MONITOR WHERE MON_ID = @id"),
+  change : {
+    name : db.prepare("UPDATE MONITOR SET MON_NAME = @name WHERE MON_ID = @id"),
+    desc : db.prepare("UPDATE MONITOR SET MON_DESC = @desc WHERE MON_ID = @id"),
+    on : db.prepare("UPDATE MONITOR SET MON_ACTV = 1 WHERE MON_ID = @id"),
+    off : db.prepare("UPDATE MONITOR SET MON_ACTV = 0 WHERE MON_ID = @id"),
+    update: db.prepare("UPDATE MONITOR SET (MON_NAME, MON_DESC, MON_ACTV) = (@name, @desc, @active)"),
+    mac : db.prepare("UPDATE MONITOR SET MON_MAC = @mac WHERE MON_ID = @id"),
+    identify : db.prepare("UPDATE MONITOR SET MON_IDENT = @identifying WHERE MON_ID = @id")
+  },
+  checkIn : db.prepare("UPDATE MONITOR SET MON_CHKIN = DATETIME('now') WHERE MON_ID = @id"),
+  rm : db.prepare("DELETE FROM MONITOR WHERE MON_ID = @id"),
+  idList : db.prepare("SELECT MON_ID FROM MONITOR"),
+  piezoId : {
+    list : db.prepare("SELECT ZN_ID FROM ZONE WHERE MON_ID = @id"),
+    byIndex : db.prepare("SELECT ZN_ID FROM (SELECT ZN_ID FROM ZONE WHERE MON_ID = @id) NATURAL JOIN PIEZO WHERE PIEZO_INDEX = @index")
+  }
+}
+
+const exists = function(el) { if(el === undefined) throw SyntaxError; return el };
+
+module.exports=( () => {
+  let _ = new WeakMap();
+  class Monitor {
+    static list(opts) {
+      let res = mystmts.idList.all();
+      let output = [];
+      try { 
+        if( exists( exists( opts).by) == 'id')
+          res.forEach( (m) => { output.push(m.MON_ID) });
+      } catch( err ) {
+        res.forEach( (m) => { output.push( new Monitor({ id : m.MON_ID })) });
+      }
+      return output;
+    }
+    static nextID() {
+      let idlist = mystmts.idList.all();
+      let max = 0;
+      idlist.forEach( (id) => {
+        if( id.MON_ID > id ) max = id;
+      })
+      return max + 1;
+    }
+    static objList() {
+      let res = mystmts.idList.all();
+    }
+    static create(opts) {
+      if(opts.mac === undefined) throw "Creating Monitor with no MAC";
+      if(opts.name === undefined) throw "Creating Monitor with no name";
+      if(opts.locID === undefined) throw "Creating Monitor with no location";
+      let query = {
+        mac : opts.mac,
+        desc :  opts.desc === undefined ? null : opts.desc,
+        name : opts.name,
+        locID : opts.locID
+      }
+      try {
+        let res = mystmts.mk.run(query);
+        if( res === undefined) throw "Failed to create monitor";
+        return res.lastInsertROWID;
+      }
+      catch(err) { throw err }
+    }
+    constructor(cfg) {
+      let row = mystmts.byID.get({id : cfg.id});
+      if(row === undefined)
+        throw "Monitor ID " + id + " does not exist";
+      let me = {
+        id : row.MON_ID,
+        mac : row.MON_MAC,
+        name : row.MON_NAME,
+        desc : row.MON_DESC,
+        active : row.MON_ACTV,
+        lastCheckIn : row.checkIn,
+        identifying : row.MON_IDENT ? true : false,
+        loc : new Location({id : row.LOC_ID})
+      }
+      _.set(this, me);
+    }
+
+    get id() { return _.get(this).id }
+    get name() { return _.get(this).name }
+    get mac() { return _.get(this).mac }
+    get desc() { return _.get(this).desc == null ? undefined : _.get(this).desc}
+    get lastCheckIn() { return _.get(this).lastCheckIn == null ? null : new Date(_.get(this).lastCheckIn); }
+    get isActive() { return _.get(this).active ? true : false }
+    get isIdentifying() { return _.get(this).identifying }
+    get loc() { return _.get(this).loc }
+    get piezoIds() { 
+      let res = mystmts.piezoId.list.all({ id : _.get(this).id });
+      let output = [];
+      res.forEach( (p) => {
+        output.push( p.ZN_ID );
+      });
+      return output;
+    }
+    get piezos() {
+      let res = mystmts.piezoId.list.all({ id : _.get(this).id });
+      let output = [];
+      res.forEach( (p) => {
+        output.push( new Piezo({ id : p.ZN_ID }) );
+      });
+      return output;
+    }
+    get pendingCommands() {
+      return Command.pending({ monID : _.get(this).id, what : 'send' });
+    }
+    get sentCommands() {
+      return Command.pending({ monID : _.get(this).id, what : 'ack' });
+    }
+
+    set name(n) {
+      mystmts.change.name.run({name :n, id : _.get(this).id});
+      _.get(this).name = n;
+    }
+    set desc(d) {
+      mystmts.change.desc.run({desc : d, id : _.get(this).id});
+      _.get(this).desc = d;
+    }
+    set mac(m) {
+      mystmts.change.mac.run({mac : m, id : _.get(this).id });
+      _.get(this).mac = m;
+    }
+    turnOn() {
+      mystmts.change.on.run({id : _.get(this).id});
+      _.get(this).active = true;
+    }
+    turnOff() {
+      mystmts.change.off.run({id : _.get(this).id});
+      _.get(this).active = true;
+    }
+    delete() {
+      mystmts.rm.run({id : _.get(this).id});
+    }
+    identify(on) {
+      if( on == 'timeout') on = false;
+      else {
+        let opts = {
+          monID : _.get(this).id,
+          params : on ? 'ON' : 'OFF'
+        }
+        new Command({name : 'identify'}).issue(opts);
+      }
+      mystmts.change.identify.run({ identifying : on ? 1 : 0, id : _.get(this).id });
+      _.get(this).identifying = on ? true : false;
+    }
+    piezoByIndex(piezoIndex) {
+      let res = mystmts.piezoId.byIndex.get( { index : exists( piezoIndex ), id : _.get(this).id });
+      console.log(res);
+      if(res === undefined) return undefined;
+      return new Piezo({ id : res.ZN_ID });
+    }
+    checkIn() {
+      mystmts.checkIn.run({id : _.get(this).id});
+    }
+    update(cfg) {
+      let query= {
+        monID : this.id,
+        name : cfg.name === undefined ? this.name : cfg.name,
+        desc : cfg.desc === undefined ? this.desc : cfg.desc,
+        active : cfg.active == "on" ? 1 : 0
+      }
+      mystmts.change.update.run(query);
+    }
+  }
+  return Monitor;
+})();
