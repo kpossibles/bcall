@@ -1,21 +1,50 @@
 {
-  "name": "bcall2",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "_from": "git+https://github.com/leithouse/bcall.git",
+  "_id": "bcall2@1.0.0",
+  "_inBundle": false,
+  "_location": "/bcall2",
+  "_phantomChildren": {
+    "typecheck": "0.1.2"
   },
-  "author": "Andrew Leitheiser <aleith@outlook.com>",
-  "license": "ISC",
+  "_requested": {
+    "type": "git",
+    "raw": "git+https://github.com/leithouse/bcall.git",
+    "rawSpec": "git+https://github.com/leithouse/bcall.git",
+    "saveSpec": "git+https://github.com/leithouse/bcall.git",
+    "fetchSpec": "https://github.com/leithouse/bcall.git",
+    "gitCommittish": null
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "git+https://github.com/leithouse/bcall.git#6b4b1c2ffc04fb9846fade1ac76d308329810225",
+  "_spec": "git+https://github.com/leithouse/bcall.git",
+  "_where": "/home/kim/bcall",
+  "author": {
+    "name": "Andrew Leitheiser",
+    "email": "aleith@outlook.com"
+  },
+  "bundleDependencies": false,
   "dependencies": {
+    "ansi-colors": "^3.2.1",
     "better-sqlite3": "^4.1.4",
     "node-geocoder": "^3.22.0",
     "phxerrors": "git+https://oauth2:Qy63GycYbEanezz4yUDi@git.pdcbiz.com/utilities/phxerrors.git",
     "phxutils": "git+https://oauth2:Qy63GycYbEanezz4yUDi@git.pdcbiz.com/utilities/phxutils.git",
+    "request": "^2.88.0",
     "serialport": "^7.0.2"
   },
+  "deprecated": false,
+  "description": "### Installation",
   "devDependencies": {
     "chai": "^4.1.2"
-  }
+  },
+  "license": "ISC",
+  "main": "index.js",
+  "name": "bcall2",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "1.0.0"
 }

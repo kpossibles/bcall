@@ -6,18 +6,39 @@ const { is, errSwitcher, localIPs } = require('phxutils');
 const Monitor = require('../monitor');
 const CLI = require('../cli');
 const net = require('net');
+const Location = require('../location');
 const Flasher = require('../flasher');
 const BCALL_DIR = process.env.BCALL_DIR;
+const Facade = require('../facade');
+const color = require('ansi-colors');
 
 const monServer = Monitor.server();
 const cliServer = new CLI.Server('/tmp/bcall');
 let mons = Monitor.list();
+let fcds = Facade.list();
+
 monServer.init().then( () => {
   monServer.on('conn', (d) => {
     console.log( `Monitor connection from monitor id ${d.monID}` );
     setTimeout( () => mons[d.monID].addConn(d.conn), 500 );
   });
 });
+
+const commands =
+`\n${color.underline.bold('COMMANDS')}
+○ ${color.bgBlue.bold('.help')}: ${color.reset('lists all the commands')}
+○ ${color.bgBlue.bold('.q[uit] / .exit')}: ${color.reset('quits the program')}
+○ ${color.bgBlue.bold('mon-list')}: ${color.reset('list all the Monitors')}
+○ ${color.bgBlue.bold('mon-add')}: ${color.reset('add a new Monitor and flashes the Arduino code to the connected chip')}
+○ ${color.bgBlue.bold('ident')}: ${color.reset('identifies the piezo sensors to add to the system')}
+○ ${color.bgBlue.bold('find-devs')}: ${color.reset('finds the correct Arduino serial port when its connected to the system')}
+○ ${color.bgBlue.bold('loc-next-id')}: ${color.reset('find next available location ID')}
+○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('adds a new Monitor without flashing the arduino')}
+○ ${color.bgBlue.bold('facade-add')}: ${color.reset('add a new facade')}
+○ ${color.bgBlue.bold('facade-list')}: ${color.reset('list all the facades in the database')}
+○ ${color.bgBlue.bold('piezo-list')}: ${color.reset('list all the piezo sensors')}
+○ ${color.bgBlue.bold('collision-list')}: ${color.reset('list collisions with criteria - time, piezo, direction, monitor, etc')}
+○ ${color.bgBlue.bold('export')}: ${color.reset('export database information criteria to CSV')}`;
 
 let formatMon = (mon) => {
   if( !mon )
@@ -35,13 +56,25 @@ let fillRow = () => {
 }
 let filledRow = fillRow();
 
+// newcode
+let formatFacade = (fcd) => {
+  if( !fcd )
+    fcd = { id : 'ID', name : 'Name', desc : 'desc'}
+  let f = '';
+  ['id', 'name', 'desc'].forEach( (prop) => {
+    f = f + '\t' + fcd[ prop ];
+  });
+  return f;
+}
+//newcode end
+
 cliServer.on('conn', (c) => {
   let monSetup = (m) => {
     m.on('unregistered', (d) => {
       c.tell(d.warn);
     });
     m.on('hit', (pid) => {
-      c.tell(`Registered hit on ${m.name} (${m.id}) pinID ${pid})`);
+      c.tell(`Registered hit on ${color.bgBlue(m.name)} (${color.bgBlue(m.id)}) pinID ${color.bgBlue(pid)})`);
     });
   }
   for( let id in mons ) {
@@ -61,6 +94,37 @@ cliServer.on('conn', (c) => {
     if( cmd == '' )
       return;
     switch( cmd ) {
+      case '.help':
+        c.tell(commands);
+        c.once('line', coreCmd);
+        break;
+      // new code
+      case 'facade-add' :
+          let finfo = {};
+            c.ask('Name of Facade?').then( (ans) => {
+                finfo.name = ans.trim();
+                return c.ask('Facade description?');
+          }).then ( (ans)=>{
+              finfo.desc = ans.trim();
+              let fcd = Facade.create(finfo);
+              c.tell(`${finfo.name} with ID: ${fcd} added\n`);
+              fcds = Facade.list();
+          })
+          .catch( (err) => { color.red(c.tell(err.message)) })
+          .then ( ()=>{
+              c.once('line', coreCmd );
+          });
+          break;
+      case 'facade-list':
+          let flist = `\n${filledRow}\n` + formatFacade() + `\n${filledRow}\n` ;
+          for( let id in fcds ) {
+          flist = flist + formatFacade( fcds[id] ) + '\n';
+          }
+          flist = flist + filledRow;
+          c.tell(flist);
+          c.once('line', coreCmd);
+          break;
+      //new code end
       case 'mon-list' :
         let list = `\n${filledRow}\n` + formatMon() + `\n${filledRow}\n` ;
         for( let id in mons ) {
@@ -80,7 +144,8 @@ cliServer.on('conn', (c) => {
         c.ask('WiFi SSID (name) running monitor on?').then( (ans) => {
           cfg.ssid = ans.trim();
           return c.ask('WiFi PSK (password)?')
-        }).then( (ans) => {
+    })
+    .then( (ans) => {
           cfg.psk = ans.trim();
           let ips = localIPs();
           let t = 'Found local IPs: ';
@@ -127,7 +192,7 @@ cliServer.on('conn', (c) => {
         })
         .then( (port) => new Promise( (resolve, reject) => {
           c.tell( `Flashing new monitor to device on port ${port}...` );
-          let f = () => Flasher.flash(port).then( () => resolve() ).catch( (err) => { c.tell( err.message ); c.ask('Try again? (y[es]/no)').then( (ans) => { if( ans.startsWith('y') ) f(); else reject(err) } ) } );
+          let f = () => Flasher.flash(port).then( () => resolve() ).catch( (err) => { c.tell( color.red(err.message) ); c.ask('Try again? (y[es]/no)').then( (ans) => { if( ans.startsWith('y') ) f(); else reject(err) } ) } );
           f();
         }) )
         .then( () => {
@@ -142,7 +207,7 @@ cliServer.on('conn', (c) => {
         .then( (name) => {
           c.tell( `Monitor ${name} created\n` );
         })
-        .catch( (err) => { c.tell(err.message) })
+        .catch( (err) => { c.tell(color.red(err.message)) })
         .then( () => {
           c.tell( ' --- Exiting Monitor Flashing SubProgram ---\n' );
           c.once('line', coreCmd );
@@ -162,13 +227,16 @@ cliServer.on('conn', (c) => {
           c.ask('Name of piezo?').then( (ans) => {
             info.name = ans.trim();
             return c.ask('Minimum detection elevation?');
-          }).then( (ans) => {
+      })
+      .then( (ans) => {
             info.el = { min : Number(ans) }
             return c.ask('Maximum detection elevation?');
-          }).then( (ans) => {
+      })
+      .then( (ans) => {
             info.el.max = Number(ans);
             return c.ask('N, NE, E, SE, S, SW, W, or NW?');
-          }).then( (ans) => {
+      })
+      .then( (ans) => {
             info.dir = ans.trim();
             info.fcdID = 1;
             c.tell('Defaulting to tempered glass facade\n');
@@ -199,6 +267,13 @@ cliServer.on('conn', (c) => {
         c.tell(` Next available monitor ID is ${mid}\n`);
         c.once('line', coreCmd);
         break;
+        //---New code
+      case 'loc-next-id':
+      let lid = Location.nextID();
+      c.tell(` Next available location ID is ${lid}\n`);
+      c.once('line', coreCmd);
+      break;
+      //---
       case 'find-devs':
         Flasher.findDev().then( (devs) => {
           c.tell( devs + '\n' );
@@ -206,29 +281,59 @@ cliServer.on('conn', (c) => {
         });
         break;
       case 'mon-add-info-only':
-        let info = { locID : 1 }
-        c.tell('Defaulting location to UWM SARUP\n');
-        c.ask('What should we name the monitor?')
+      //---New code
+      let monInfo = {}
+      let locInfo = {}
+
+      c.ask('What is the address of the building in which the Monitor is located? (Leave blank for default location)').then( (ans) => {
+        locInfo.addr = ans.trim();
+        return c.ask('Give a name to this location. (Leave blank for default location)');
+      })
+      .then( (ans) => {
+        locInfo.name = ans.trim();
+        if (locInfo.name != '' && locInfo.addr != '') {
+          try {
+            let locNextID = Location.nextID();
+            let loc = new Location(Location.create(locInfo));
+            c.tell('New location successfully created')
+            let locGetID = loc.id();
+            //c.tell(`Next locID before adding new loc: ${locNextID}. locID of new loc: ${logGetID}\n`);
+            monInfo.locID = LocNextID;
+          }
+          catch(err) {
+            c.tell( color.red(err.message + '\n' + '(ERROR) Location will default to UWM SARUP' + '\n'));
+            monInfo.locID = 1;
+          }
+        }
+        else {
+          c.tell('Location will default to UWM SARUP' + '\n');
+          monInfo.locID = 1;
+        }
+        return c.ask('What should we name the monitor?');
+      })
+    
+      //---End of New Code
         .then( (ans) => {
-          info.name = ans;
+          monInfo.name = ans;
           return c.ask('What is the ID of the monitor? (answer help if this doesnt make sense)')
-        }).then( (ans) => {
+    })
+    .then( (ans) => {
           if( ans == 'help' ) {
-            let tut = `\nAll directory references are located within the main bcall directory at ${process.env.BCALL_DIR}\n
+            let tut = `\nAll directory references are located within the main bcall directory at ${color.bgBlue.bold(process.env.BCALL_DIR)}\n
             Until the CLI flasher is fixed, the monitor info needs to be set manually\n
 This involves editing config.h in the directory embedded\n
-You can use the command "mon-next-id" to retrieve the proper id\n
-After editing the file, go to the lib directory\n
-Type ./builder to compile the binary\n
+You can use the command ${color.bgBlue.bold('"mon-next-id"')} to retrieve the proper id\n
+After editing the file, go to the lib directory (${color.bgBlue.bold('$BCALL_DIR/lib')})\n
+Type ${color.bgBlue.bold('./builder')} to compile the binary\n
 Next make sure that the arduino is connected via usb to this computer\n
 Ensure the arduino is in bootloader mode with two rapid presses to the reset button\n
 Now you need to know the port that the device is on, currently we found ports at:\n`;
             c.tell(tut);
             Flasher.findDev().then( (devs) => {
-              tut = `${devs} + \n
-In the future you can use the command find-devs to skip the tutorial and just find the dev\n
+              tut = `${color.bgBlue.bold(devs)} + \n
+In the future you can use the command ${color.bgBlue.bold('find-devs')} to skip the tutorial and just find the dev\n
 If there are multiple devices shown, try unplugging the arduino and seeing which one disappears\n
-Now you run the flasher (still from the lib directory)\n
+Now you run the flasher (still from the lib directory: ${color.bgBlue('$BCALL_DIR/lib')})\n
 The flasher takes one argument, and that argument is the device the arduino is on\n
 For example, if your device is at /dev/ttyACM1, you would run\n\n
 ./flasher /dev/ttyACM1\n\n
@@ -243,16 +348,16 @@ Now you can start this process over\n`;
             })
           }
           else {
-            info.id = ans;
+            monInfo.id = parseInt(ans);
             try {
-              let m = new Monitor( Monitor.mk(info) );
+              let m = new Monitor( Monitor.mk(monInfo) );
               c.tell('Monitor successfuly created\n');
               monSetup(m);
               mons = Monitor.list();
               c.once('line', coreCmd);
             }
             catch( err ) { 
-              c.tell( err.message + '\n' );
+              c.tell( color.red(err.message + '\n') );
               c.once('line', coreCmd);
             }
           }

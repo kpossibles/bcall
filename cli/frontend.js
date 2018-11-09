@@ -3,6 +3,7 @@ const { is, errSwitcher } = require('phxutils');
 const net = require('net');
 const readline = require('readline');
 const CLASSNAME = 'CLIFrontEnd';
+const c = require('ansi-colors');
 
 module.exports = ( () => {
   class CLIFrontEnd {
@@ -19,12 +20,12 @@ module.exports = ( () => {
         let rl = readline.createInterface( {
           input : process.stdin,
           output : process.stdout,
-          prompt : 'bcall~> '
+          prompt : c.cyan.bold('bcall~> ')
         } );
         rl.on('close', () => {
-          console.log('\n\t-----------------------------------')
-          console.log('\t---\tExiting BCALL CLI\t---');
-          console.log('\t-----------------------------------\n')
+          console.log(c.cyan.bold('\n\t-----------------------------------'))
+          console.log(c.cyan.bold('\t---\tExiting BCALL CLI\t---'));
+          console.log(c.cyan.bold('\t-----------------------------------\n'))
           process.exit(0);
         });
         rl.on('line', (l) => {
@@ -35,10 +36,11 @@ module.exports = ( () => {
             rl.prompt();
           }
         });
-        console.log('\n\t-----------------------------------')
-        console.log('\t---\tEntering BCALL CLI\t---');
-        console.log('\t-- ".exit" or ".q[uit]" to exit  --');
-        console.log('\t-----------------------------------\n\n')
+        console.log(c.cyan.bold('\n\t-----------------------------------'))
+        console.log(c.cyan.bold('\t---\tEntering BCALL CLI\t---'));
+        console.log(c.cyan.bold(`\t--\t${c.bgBlue(".help")} for commands\t--`));
+        console.log(c.cyan.bold(`\t-- ${c.bgBlue(".exit")} or ${c.bgBlue(".q[uit]")} to exit  --`));
+        console.log(c.cyan.bold('\t-----------------------------------\n\n'))
         conn.on('data', (d) => {
           console.log(d);
           rl.prompt();

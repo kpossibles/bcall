@@ -4,6 +4,7 @@ const net = require('net');
 const readline = require('readline');
 const EventEmitter = require('events');
 const CLASSNAME = 'CLIBackEnd';
+const c = require('ansi-colors');
 
 module.exports = ( () => {
   let _ = new WeakMap();
@@ -44,7 +45,7 @@ module.exports = ( () => {
           this.once('line', (l) => { 
             resolve( l.trim() );
           } );
-          this.tell(ques);
+          this.tell(c.bold(`${c.green.underline('\[?\]')} `+ques));
         }
         catch( err ) { errSwitcher(CLASSNAME, METHODNAME, err ) }
       });
@@ -58,7 +59,7 @@ module.exports = ( () => {
       let METHODNAME = 'tell(what)';
       try {
         is( what, 'string', 'what');
-        _.get(this).rl.output.write(what);
+        _.get(this).rl.output.write(c.bold(what));
         return true;
       }
       catch( err ) { errSwitcher(CLASSNAME, METHODNAME, err) }

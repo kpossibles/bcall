@@ -13,29 +13,41 @@ const mystmts = {
 module.exports=( () => {
   let _ = new WeakMap();
   class Location {
+
+  	//---New method
+    static nextID() {
+      let idlist = db.prepare('SELECT LOC_ID FROM LOCATION').all();
+      let max = 0;
+      idlist.forEach( (row) => {
+        if( row.LOC_ID > max ) max = row.LOC_ID;
+      })
+      return max + 1;
+    }
+
+    //Changed opts.address to opts.addr 
     static create(opts) {
-      try {
-        let query = {
-          name : opts.name,
-          desc : opts.desc === undefined ? null : opts.desc
-        }
-        let lookup;
-        if(opts.address !== undefined)
-          lookup = geo.geocode(opts.address)
-        else if(opts.longitude !== undefined && opts.latitude !== undefined)
-          lookup = geo.geocode(opts.latitude + ', ' + opts.longitude);
-        else
-          throw "No lookup data provided"
-        return lookup.then( (res) => {
-          res = res[0];
-          query.addr = res.streetNumber + ' ' + res.streetName + ', ' + res.city + ' ' + res.state + ' ' + res.zipcode;
-          query.lat = res.latitude;
-          query.lon = res.longitude;
-        })
-        .then( () => mystmts.mk.run(query) )
-        .catch( (err) => _ );
-      }
-      catch(err) { throw err }
+    	try {
+    		let query = {
+    			name : opts.name,
+    			desc : opts.desc === undefined ? null : opts.desc
+    		}
+    		let lookup;
+    		if(opts.addr !== undefined)
+    			lookup = geo.geocode(opts.addr)
+    		else if(opts.longitude !== undefined && opts.latitude !== undefined)
+    			lookup = geo.geocode(opts.latitude + ', ' + opts.longitude);
+    		else
+    			{throw "No lookup data provided"}
+    		return lookup.then( (res) => {
+    			res = res[0];
+    			query.addr = res.streetNumber + ' ' + res.streetName + ', ' + res.city + ' ' + res.state + ' ' + res.zipcode;
+    			query.lat = res.latitude;
+    			query.lon = res.longitude;
+    		})
+    		.then( () => mystmts.mk.run(query) )
+    		.catch( (err) => _ );
+    	}
+    	catch(err) { throw err }
     }
     constructor(opts) {
       let res;
