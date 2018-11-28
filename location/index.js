@@ -7,16 +7,35 @@ const mystmts = {
   change : {
     name : db.prepare("UPDATE LOCATION SET LOC_NAME = @name WHERE LOC_ID = @id"),
     desc : db.prepare("UPDATE LOCATION SET LOC_DESC = @desc WHERE LOC_ID = @id")
-  }
+  },
+  allIDs : db.prepare("SELECT LOC_ID FROM LOCATION WHERE LOC_ID > 0 ORDER BY LOC_ID DESC")
 };
 
 module.exports=( () => {
   let _ = new WeakMap();
   class Location {
+      
+    // new code
+    /**
+     * Compile a list of all locations in the system
+     * @returns {Location[]} Array of all locations
+     */
+    static list() {
+      let METHODNAME = 'list()';
+      try {
+        let res = mystmts.allIDs.all();
+        let output = [];
+        res.forEach( (row) => {
+            output[row.LOC_ID] =( new Location({ id : row.LOC_ID }) );
+        });
+        return output;
+      }
+      catch( err ) { errSwitcher( CLASSNAME, METHODNAME, err ) }
+    }
 
   	//---New method
     static nextID() {
-      let idlist = db.prepare('SELECT LOC_ID FROM LOCATION').all();
+      let idlist = mystmts.allIDs.all();
       let max = 0;
       idlist.forEach( (row) => {
         if( row.LOC_ID > max ) max = row.LOC_ID;

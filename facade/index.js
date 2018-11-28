@@ -33,9 +33,27 @@ module.exports=( () => {
       let res = mystmts.allIDs.all();
       let output = [];
       res.forEach( (f) => {
-        output.push( new Facade({ id : f.FCD_ID }) );
+        output[f.FCD_ID] = ( new Facade({ id : f.FCD_ID }) );
       });
       return output;
+    }
+    static edit(opts){
+        let res='';
+        try{
+            if(typeof opts.id!='undefined') {
+                if(opts.desc!='' && opts.name!=''){
+                    if(opts.desc!='')
+                        res = mystmts.change.name.run({name : opts.name, id : opts.id}); 
+                    else if(opts.name!='')
+                        res = mystmts.change.desc.run({desc : opts.desc, id : opts.id}); 
+                }
+                else
+                    res = mkstmts.change.all.run(opts);
+                if(res.changes != 1) throw new Error();
+                console.log(`FACADE EDIT: Changes made on ${opts.id}!`);
+                return true;
+            }   
+        } catch(err){ throw err }
     }
     constructor(opts) {
       let res;

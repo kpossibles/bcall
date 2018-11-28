@@ -16,6 +16,7 @@ const monServer = Monitor.server();
 const cliServer = new CLI.Server('/tmp/bcall');
 let mons = Monitor.list();
 let fcds = Facade.list();
+let locs = Location.list();
 
 monServer.init().then( () => {
   monServer.on('conn', (d) => {
@@ -59,10 +60,23 @@ let filledRow = fillRow();
 // newcode
 let formatFacade = (fcd) => {
   if( !fcd )
-    fcd = { id : 'ID', name : 'Name', desc : 'desc'}
+    fcd = { id : 'ID', name : 'Name', desc : 'Description'}
   let f = '';
   ['id', 'name', 'desc'].forEach( (prop) => {
     f = f + '\t' + fcd[ prop ];
+  });
+  return f;
+}
+
+let formatLocation = (loc) => {
+  if( !loc )
+    loc = { id : 'ID', name : 'Name', addr : 'Address', desc : 'Description'}
+  let f = '';
+  ['id', 'name', 'addr', 'desc'].forEach( (prop) => {
+      if (loc[prop] == undefined)
+          f = f + '\tN/A';
+      else
+        f = f + '\t' + loc[ prop ];
   });
   return f;
 }
@@ -85,6 +99,7 @@ cliServer.on('conn', (c) => {
     l = l.trim();
     let lsp = l.indexOf(' ');
     let cmd, args;
+    let list = '';
     if( lsp == -1 ) 
       cmd = l;
     else {
@@ -115,18 +130,54 @@ cliServer.on('conn', (c) => {
               c.once('line', coreCmd );
           });
           break;
+      case 'test':
+          if(args!=undefined)
+              c.tell(`Facade ${args}: `+Facade.id);
+          c.once('line', coreCmd );
+          break;
+      case 'facade-change' :
+          list = {};
+          if( args == undefined ) {
+            c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
+            c.once('line', coreCmd);
+            return;
+            }
+          list.id = args;
+          c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
+              list.name = ans.trim();
+              return c.ask('Description? (leave blank if no changes)')
+        }).then( (ans) =>{
+            list.desc = ans.trim();
+            let temp = Facade.edit(list);
+            c.tell(`Facade id ${list.id} details changed ${temp}\n`);
+            fcds = Facade.list();
+              
+        }).catch( (err) => { color.red(c.tell(err.message)) })
+          .then ( ()=>{
+              c.once('line', coreCmd );
+          });
+          break;
       case 'facade-list':
-          let flist = `\n${filledRow}\n` + formatFacade() + `\n${filledRow}\n` ;
+          list = `\n${filledRow}\n` + formatFacade() + `\n${filledRow}\n` ;
           for( let id in fcds ) {
-          flist = flist + formatFacade( fcds[id] ) + '\n';
+          list = list + formatFacade( fcds[id] ) + '\n';
           }
-          flist = flist + filledRow;
-          c.tell(flist);
+          list = list + filledRow;
+          c.tell(list);
           c.once('line', coreCmd);
           break;
+      case 'loc-list':
+        list = `\n${filledRow}\n` + formatLocation() + `\n${filledRow}\n` ;
+        for( let id in locs ) {
+          list = list + formatLocation( locs[id] ) + '\n';
+        }
+        list = list + filledRow;
+        c.tell(list);
+        c.once('line', coreCmd);
+        break;
       //new code end
       case 'mon-list' :
-        let list = `\n${filledRow}\n` + formatMon() + `\n${filledRow}\n` ;
+        list = `\n${filledRow}\n` + formatMon() + `\n${filledRow}\n` ;
         for( let id in mons ) {
           list = list + formatMon( mons[id] ) + '\n';
         }
@@ -215,7 +266,7 @@ cliServer.on('conn', (c) => {
         break;
       case 'ident' :
         if( ! mons[args] ) {
-          c.tell('Invalid monitor ID');
+          c.tell(`Invalid monitor ID; command is ${color.bgBlue('ident [ID]')}`);
           c.once('line', coreCmd);
           return;
         }
@@ -296,6 +347,7 @@ cliServer.on('conn', (c) => {
             let locNextID = Location.nextID();
             let loc = new Location(Location.create(locInfo));
             c.tell('New location successfully created')
+            locs=Location.list();
             let locGetID = loc.id();
             //c.tell(`Next locID before adding new loc: ${locNextID}. locID of new loc: ${logGetID}\n`);
             monInfo.locID = LocNextID;
