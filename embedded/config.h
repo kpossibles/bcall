@@ -1,7 +1,6 @@
-char netSSID[] = "me2";
-char netPWRD[] = "f2n42wdIH";
-IPAddress netSRVR(192,168,10,101);
+char netSSID[] = "BirdCALL";
+char netPWRD[] = "1bIthIw2ItB";
+IPAddress netSRVR(192,168,1,3);
 int netPORT = 53211;
-int readWindow = 1024;
-int waitAfter = 1024;
-int monID = 10;
+int readWindow = 150;
+int monID = 1;
