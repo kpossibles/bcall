@@ -27,60 +27,86 @@ monServer.init().then( () => {
 
 const commands =
 `\n${color.underline.bold('COMMANDS')}
+○ ${color.bgBlue.bold('.tutorial')}: ${color.reset('Getting started')}
 ○ ${color.bgBlue.bold('.help')}: ${color.reset('lists all the commands')}
 ○ ${color.bgBlue.bold('.q[uit] / .exit')}: ${color.reset('quits the program')}
 ○ ${color.bgBlue.bold('mon-list')}: ${color.reset('list all the Monitors')}
 ○ ${color.bgBlue.bold('mon-add')}: ${color.reset('add a new Monitor and flashes the Arduino code to the connected chip')}
-○ ${color.bgBlue.bold('ident')}: ${color.reset('identifies the piezo sensors to add to the system')}
+○ ${color.bgBlue.bold('ident <Monitor ID>')}: ${color.reset('identifies the piezo sensors to add to the system')}
 ○ ${color.bgBlue.bold('find-devs')}: ${color.reset('finds the correct Arduino serial port when its connected to the system')}
 ○ ${color.bgBlue.bold('loc-next-id')}: ${color.reset('find next available location ID')}
 ○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('adds a new Monitor without flashing the arduino')}
 ○ ${color.bgBlue.bold('facade-add')}: ${color.reset('add a new facade')}
 ○ ${color.bgBlue.bold('facade-list')}: ${color.reset('list all the facades in the database')}
+○ ${color.bgBlue.bold('facade-change')}: ${color.reset('modify a pre-existing facade from the DB')}
 ○ ${color.bgBlue.bold('piezo-list')}: ${color.reset('list all the piezo sensors')}
 ○ ${color.bgBlue.bold('collision-list')}: ${color.reset('list collisions with criteria - time, piezo, direction, monitor, etc')}
 ○ ${color.bgBlue.bold('export')}: ${color.reset('export database information criteria to CSV')}`;
 
-let formatMon = (mon) => {
-  if( !mon )
-    mon = { id : 'ID', name : 'Name', isActive : 'isActive', piezoCount : 'NumPiezos' }
-  let f = '';
-  ['id', 'name', 'isActive', 'piezoCount'].forEach( (prop) => {
-    f = f + '\t' + mon[ prop ];
-  });
-  return f;
+const tutorial = 
+`Welcome to BirdCALL! 
+
+Before getting started in this program, you must flash the embedded.ino code to the USB-connected Arduino chip (Feather M0 WiFi) using the Arduino IDE.
+1. Use command ${color.bgBlue('mon-add-info-only')} to correctly add a monitor to the system before starting up the Arduino chip.
+2. Next, use command ${color.bgBlue('ident <Monitor ID #>')} to add all the piezo sensors to the system
+3. Your BirdCALL program is ready to receive data!
+4. Use other commands under ${color.bgBlue('.help')} to modify, list, and export collected data.`;
+
+/**
+ * Formats table row entries for list commands
+ * @param {*} type 
+ * @param {*} listing 
+ */
+let formatTableRow = (type, listing) => {
+	let f = '';
+	if (type == 'monitor'){
+		if( !listing)
+			listing = { id : 'ID', name : 'Name', isActive : 'isActive', piezoCount : 'NumPiezos' }
+		let obj = ['id', 'name', 'isActive'];
+		obj.forEach( (prop) => {
+			if(listing['id'] == 'ID')
+				f = f + '\t' + color.bold(listing[ prop ]); 
+			else
+				f = f + '\t' + listing[ prop ];
+		});
+		if (listing['piezoCount'] != 'NumPiezos') f = f + '\t\t' + listing[ 'piezoCount' ];
+		else f = f + '\t' + color.bold(listing[ 'piezoCount' ]);
+	} else if (type == 'facade'){
+		if( !listing )
+			listing = { id : 'ID', name : 'Name', desc : 'Description'}
+		let obj = ['id', 'name', 'desc'];
+		obj.forEach( (prop) => {
+			if(listing['id'] == 'ID')
+				f = f + '\t' + color.bold(listing[ prop ]); 
+			else
+				f = f + '\t' + listing[ prop ];
+		});
+	} else if (type == 'location'){
+		if( !listing )
+			listing = { id : 'ID', name : 'Name', addr : 'Address', desc : 'Description'}
+		let obj = ['id', 'name', 'addr', 'desc'];
+		obj.forEach( (prop) => {
+				if (listing[prop] == undefined)
+						f = f + '\tN/A';
+				else{
+					if(listing['id'] == 'ID')
+						f = f + '\t' + color.bold(listing[ prop ]); 
+					else
+					f = f + '\t' + listing[ prop ];
+				}
+		});
+	} else {
+		console.log(`formatTableRow: unable to find type: ${type}`);
+	}
+	return f;
 }
+
 let fillRow = () => {
   let r = '';
-  for( let i = 0; i < 60; i++ ) r += '-';
+  for( let i = 0; i < 60; i++ ) r += color.magenta('-');
   return r;
 }
 let filledRow = fillRow();
-
-// newcode
-let formatFacade = (fcd) => {
-  if( !fcd )
-    fcd = { id : 'ID', name : 'Name', desc : 'Description'}
-  let f = '';
-  ['id', 'name', 'desc'].forEach( (prop) => {
-    f = f + '\t' + fcd[ prop ];
-  });
-  return f;
-}
-
-let formatLocation = (loc) => {
-  if( !loc )
-    loc = { id : 'ID', name : 'Name', addr : 'Address', desc : 'Description'}
-  let f = '';
-  ['id', 'name', 'addr', 'desc'].forEach( (prop) => {
-      if (loc[prop] == undefined)
-          f = f + '\tN/A';
-      else
-        f = f + '\t' + loc[ prop ];
-  });
-  return f;
-}
-//newcode end
 
 cliServer.on('conn', (c) => {
   let monSetup = (m) => {
@@ -109,6 +135,10 @@ cliServer.on('conn', (c) => {
     if( cmd == '' )
       return;
     switch( cmd ) {
+			case '.tutorial':
+				c.tell(tutorial);
+				c.once('line', coreCmd);
+				break;
       case '.help':
         c.tell(commands);
         c.once('line', coreCmd);
@@ -158,18 +188,18 @@ cliServer.on('conn', (c) => {
           });
           break;
       case 'facade-list':
-          list = `\n${filledRow}\n` + formatFacade() + `\n${filledRow}\n` ;
+          list = `\n${filledRow}\n` + formatTableRow('facade') + `\n${filledRow}\n` ;
           for( let id in fcds ) {
-          list = list + formatFacade( fcds[id] ) + '\n';
+          list = list + formatTableRow( 'facade', fcds[id] ) + '\n';
           }
           list = list + filledRow;
           c.tell(list);
           c.once('line', coreCmd);
           break;
       case 'loc-list':
-        list = `\n${filledRow}\n` + formatLocation() + `\n${filledRow}\n` ;
+        list = `\n${filledRow}\n` + formatTableRow('location') + `\n${filledRow}\n` ;
         for( let id in locs ) {
-          list = list + formatLocation( locs[id] ) + '\n';
+          list = list + formatTableRow('location', locs[id] ) + '\n';
         }
         list = list + filledRow;
         c.tell(list);
@@ -177,9 +207,9 @@ cliServer.on('conn', (c) => {
         break;
       //new code end
       case 'mon-list' :
-        list = `\n${filledRow}\n` + formatMon() + `\n${filledRow}\n` ;
+        list = `\n${filledRow}\n` + formatTableRow('monitor') + `\n${filledRow}\n` ;
         for( let id in mons ) {
-          list = list + formatMon( mons[id] ) + '\n';
+          list = list + formatTableRow('monitor', mons[id] ) + '\n';
         }
         list = list + filledRow;
         c.tell(list);
@@ -265,53 +295,65 @@ cliServer.on('conn', (c) => {
         })
         break;
       case 'ident' :
-        if( ! mons[args] ) {
+				if( ! mons[args] ) 
+				{
           c.tell(`Invalid monitor ID; command is ${color.bgBlue('ident [ID]')}`);
           c.once('line', coreCmd);
           return;
         }
         let mon = mons[args];
-        mon.identify(true);
-        let ident = (pid) => {
+				mon.identify(true);
+				
+				let ident = (pid) => 
+				{
           let info = { pid : pid };
           c.tell('Piezo detected\n');
           c.ask('Name of piezo?').then( (ans) => {
             info.name = ans.trim();
             return c.ask('Minimum detection elevation?');
-      })
-      .then( (ans) => {
+          })
+          .then( (ans) => {
             info.el = { min : Number(ans) }
             return c.ask('Maximum detection elevation?');
-      })
-      .then( (ans) => {
+          })
+          .then( (ans) => {
             info.el.max = Number(ans);
             return c.ask('N, NE, E, SE, S, SW, W, or NW?');
-      })
-      .then( (ans) => {
+          })
+          .then( (ans) => {
             info.dir = ans.trim();
             info.fcdID = 1;
             c.tell('Defaulting to tempered glass facade\n');
             let piezo = mon.addPiezo(info);
-            c.tell(`${piezo.name} added to ${mon.name}\n`);
-            mon.once('identify', ident);
+            c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
+						//mon.once('identify', ident);
           });
-        }
-        let kill =  () => {
-          mon.removeListener('identify', ident);
-          mon.removeListener('identTimeout', kill);
-          c.tell(` --- Exiting Identify on ${mon.name} SubProgram ---\n`);
-          c.once('line', coreCmd);
-        }
+				}
+				
+				let kill =  () => 
+				{
+					mon.removeListener('identify', ident);
+					//mon.removeAllListeners('identify');
+					mon.removeListener('identTimeout', kill);
+					//mon.removeAllListeners('identTimeout');
+
+					c.tell(` --- Exiting Identify on ${mon.name} SubProgram ---\n`);
+					c.once('line', coreCmd);
+				}
+				
         mon.once('identTimeout', kill);
         mon.once('identify', ident);
-        let chkQuit = (l) => {
+				let chkQuit = (l) => 
+				{
           if( l == 'stop' ) {
             c.removeListener('line', l);
             kill();
           }
-        }
-        c.once('line', coreCmd);
+				}
+				
         c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
+        c.once('line', coreCmd);
+        
         break;
       case 'mon-next-id': 
         let mid = Monitor.nextID();
