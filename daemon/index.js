@@ -11,12 +11,14 @@ const Flasher = require('../flasher');
 const BCALL_DIR = process.env.BCALL_DIR;
 const Facade = require('../facade');
 const color = require('ansi-colors');
+const Table = require('cli-table');
 
 const monServer = Monitor.server();
 const cliServer = new CLI.Server('/tmp/bcall');
 let mons = Monitor.list();
 let fcds = Facade.list();
 let locs = Location.list();
+let table = new Table();
 
 monServer.init().then( () => {
   monServer.on('conn', (d) => {
@@ -51,62 +53,6 @@ Before getting started in this program, you must flash the embedded.ino code to 
 2. Next, use command ${color.bgBlue('ident <Monitor ID #>')} to add all the piezo sensors to the system
 3. Your BirdCALL program is ready to receive data!
 4. Use other commands under ${color.bgBlue('.help')} to modify, list, and export collected data.`;
-
-/**
- * Formats table row entries for list commands
- * @param {*} type 
- * @param {*} listing 
- */
-let formatTableRow = (type, listing) => {
-	let f = '';
-	if (type == 'monitor'){
-		if( !listing)
-			listing = { id : 'ID', name : 'Name', isActive : 'isActive', piezoCount : 'NumPiezos' }
-		let obj = ['id', 'name', 'isActive'];
-		obj.forEach( (prop) => {
-			if(listing['id'] == 'ID')
-				f = f + '\t' + color.bold(listing[ prop ]); 
-			else
-				f = f + '\t' + listing[ prop ];
-		});
-		if (listing['piezoCount'] != 'NumPiezos') f = f + '\t\t' + listing[ 'piezoCount' ];
-		else f = f + '\t' + color.bold(listing[ 'piezoCount' ]);
-	} else if (type == 'facade'){
-		if( !listing )
-			listing = { id : 'ID', name : 'Name', desc : 'Description'}
-		let obj = ['id', 'name', 'desc'];
-		obj.forEach( (prop) => {
-			if(listing['id'] == 'ID')
-				f = f + '\t' + color.bold(listing[ prop ]); 
-			else
-				f = f + '\t' + listing[ prop ];
-		});
-	} else if (type == 'location'){
-		if( !listing )
-			listing = { id : 'ID', name : 'Name', addr : 'Address', desc : 'Description'}
-		let obj = ['id', 'name', 'addr', 'desc'];
-		obj.forEach( (prop) => {
-				if (listing[prop] == undefined)
-						f = f + '\tN/A';
-				else{
-					if(listing['id'] == 'ID')
-						f = f + '\t' + color.bold(listing[ prop ]); 
-					else
-					f = f + '\t' + listing[ prop ];
-				}
-		});
-	} else {
-		console.log(`formatTableRow: unable to find type: ${type}`);
-	}
-	return f;
-}
-
-let fillRow = () => {
-  let r = '';
-  for( let i = 0; i < 60; i++ ) r += color.magenta('-');
-  return r;
-}
-let filledRow = fillRow();
 
 cliServer.on('conn', (c) => {
   let monSetup = (m) => {
@@ -188,31 +134,38 @@ cliServer.on('conn', (c) => {
           });
           break;
       case 'facade-list':
-          list = `\n${filledRow}\n` + formatTableRow('facade') + `\n${filledRow}\n` ;
-          for( let id in fcds ) {
-          list = list + formatTableRow( 'facade', fcds[id] ) + '\n';
+          table = new Table({
+              head: ['ID','Name', 'Description']
+          });
+          for( let i in fcds ) {
+            let desc = fcds[i].desc;
+            if(desc == null) desc = 'N/A';
+            table.push([fcds[i].id, fcds[i].name, desc]);
           }
-          list = list + filledRow;
-          c.tell(list);
+          c.tell(`\n`+table.toString());
           c.once('line', coreCmd);
           break;
       case 'loc-list':
-        list = `\n${filledRow}\n` + formatTableRow('location') + `\n${filledRow}\n` ;
-        for( let id in locs ) {
-          list = list + formatTableRow('location', locs[id] ) + '\n';
+        table = new Table({
+            head: ['ID','Name', 'Address','Description']
+        });
+        for( let i in locs ) {
+          let desc = locs[i].desc;
+          if(desc == null) desc = 'N/A';
+          table.push([locs[i].id, locs[i].name, locs[i].addr, desc]);
         }
-        list = list + filledRow;
-        c.tell(list);
+        c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
       //new code end
       case 'mon-list' :
-        list = `\n${filledRow}\n` + formatTableRow('monitor') + `\n${filledRow}\n` ;
-        for( let id in mons ) {
-          list = list + formatTableRow('monitor', mons[id] ) + '\n';
+        table = new Table({
+            head: ['ID', 'Name', 'isActive', 'NumPiezos']
+        });
+        for( let i in mons ) {
+          table.push([mons[i].id, mons[i].name, mons[i].isActive, mons[i].piezoCount]);
         }
-        list = list + filledRow;
-        c.tell(list);
+        c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
       case 'mon-add' :
