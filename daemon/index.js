@@ -20,6 +20,44 @@ let fcds = Facade.list();
 let locs = Location.list();
 let table = new Table();
 
+/**
+ * Formats sets up table
+ * @param {String} type 
+ */
+let formatTable = (type) => {
+  if(type == 'facade') {
+    table = new Table({
+      head: ['ID','Name', 'Description'],
+      style: {head: ['magenta'], border: ['grey']}
+    });
+    for( let i in fcds ) {
+      let desc = fcds[i].desc;
+      if(desc == null) desc = 'N/A';
+      table.push([fcds[i].id, fcds[i].name, desc]);
+    }
+  } else if (type == 'location') {
+    table = new Table({
+      head: ['ID','Name', 'Address','Description'],
+      style: {head: ['magenta'], border: ['grey']}
+    });
+    for( let i in locs ) {
+      let desc = locs[i].desc;
+      if(desc == null) desc = 'N/A';
+      table.push([locs[i].id, locs[i].name, locs[i].addr, desc]);
+    }
+  } else if (type == 'monitor') {
+    table = new Table({
+      head: ['ID', 'Name', 'isActive', 'NumPiezos'],
+      style: {head: ['magenta'], border: ['grey']}
+    });
+    for( let i in mons ) {
+      table.push([mons[i].id, mons[i].name, mons[i].isActive, mons[i].piezoCount]);
+    }
+  } else {
+    table = new Table();
+    console.log(`ERROR: Table type not specified correctly`);
+  }
+}
 monServer.init().then( () => {
   monServer.on('conn', (d) => {
     console.log( `Monitor connection from monitor id ${d.monID}` );
@@ -134,37 +172,18 @@ cliServer.on('conn', (c) => {
           });
           break;
       case 'facade-list':
-          table = new Table({
-              head: ['ID','Name', 'Description']
-          });
-          for( let i in fcds ) {
-            let desc = fcds[i].desc;
-            if(desc == null) desc = 'N/A';
-            table.push([fcds[i].id, fcds[i].name, desc]);
-          }
+          formatTable('facade');
           c.tell(`\n`+table.toString());
           c.once('line', coreCmd);
           break;
       case 'loc-list':
-        table = new Table({
-            head: ['ID','Name', 'Address','Description']
-        });
-        for( let i in locs ) {
-          let desc = locs[i].desc;
-          if(desc == null) desc = 'N/A';
-          table.push([locs[i].id, locs[i].name, locs[i].addr, desc]);
-        }
+        formatTable('location');
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
       //new code end
       case 'mon-list' :
-        table = new Table({
-            head: ['ID', 'Name', 'isActive', 'NumPiezos']
-        });
-        for( let i in mons ) {
-          table.push([mons[i].id, mons[i].name, mons[i].isActive, mons[i].piezoCount]);
-        }
+        formatTable('monitor');
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
