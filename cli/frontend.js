@@ -4,6 +4,9 @@ const net = require('net');
 const readline = require('readline');
 const CLASSNAME = 'CLIFrontEnd';
 const c = require('ansi-colors');
+const CFonts = require('cfonts');
+const gradient = require('gradient-string');
+const style = require('ansi-styles');
 
 module.exports = ( () => {
   class CLIFrontEnd {
@@ -23,9 +26,9 @@ module.exports = ( () => {
           prompt : c.cyan.bold('bcall~> ')
         } );
         rl.on('close', () => {
-          console.log(c.cyan.bold('\n\t-----------------------------------'))
-          console.log(c.cyan.bold('\t---\tExiting BCALL CLI\t---'));
-          console.log(c.cyan.bold('\t-----------------------------------\n'))
+          console.log(gradient.mind('\n■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■'));
+          console.log(c.cyan.bold(`${style.color.ansi16m.hex('#473b7b')}█${style.color.close}\t\t\tExiting BCALL CLI\t\t\t  ${style.color.ansi16m.hex('#30d2be')}█${style.color.close}`));
+          console.log(gradient.mind('■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■\n'));
           process.exit(0);
         });
         rl.on('line', (l) => {
@@ -36,11 +39,25 @@ module.exports = ( () => {
             rl.prompt();
           }
         });
-        console.log(c.cyan.bold('\n\t-----------------------------------'))
-        console.log(c.cyan.bold('\t---\tEntering BCALL CLI\t---'));
-        console.log(c.cyan.bold(`\t--\t${c.bgBlue(".help")} for commands\t--`));
-        console.log(c.cyan.bold(`\t-- ${c.bgBlue(".exit")} or ${c.bgBlue(".q[uit]")} to exit  --`));
-        console.log(c.cyan.bold('\t-----------------------------------\n\n'))
+        // start title sequence
+        let title = CFonts.render('BirdCALL', {
+          font: 'block',              // define the font face
+          align: 'left',              // define text alignment
+          colors: ['system'],         // define all colors
+          background: 'transparent',  // define the background color, you can also use `backgroundColor` here as key
+          letterSpacing: 1,           // define letter spacing
+          lineHeight: 1,              // define the line height
+          space: false,                // define if the output text should have empty lines on top and on the bottom
+          maxLength: '0',             // define how many character can be on one line
+        });
+        console.log('');
+        console.log(gradient.mind(title.string));
+        console.log(gradient.mind('\n■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■'));
+        console.log(c.cyan.bold(`${style.color.ansi16m.hex('#473b7b')}█${style.color.close}\t\t\tEntering BCALL CLI\t\t\t  ${style.color.ansi16m.hex('#30d2be')}█${style.color.close}`));
+        console.log(c.cyan.bold(`${style.color.ansi16m.hex('#473b7b')}█${style.color.close}\t\t   ${c.bgBlue(".tutorial")} for Getting Started\t\t  ${style.color.ansi16m.hex('#30d2be')}█${style.color.close}`));
+        console.log(c.cyan.bold(`${style.color.ansi16m.hex('#473b7b')}█${style.color.close}\t\t\t${c.bgBlue(".help")} for commands\t\t\t  ${style.color.ansi16m.hex('#30d2be')}█${style.color.close}`));
+        console.log(c.cyan.bold(`${style.color.ansi16m.hex('#473b7b')}█${style.color.close}\t\t      ${c.bgBlue(".exit")} or ${c.bgBlue(".q[uit]")} to exit\t\t\t  ${style.color.ansi16m.hex('#30d2be')}█${style.color.close}`));
+        console.log(gradient.mind('■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■\n'))
         conn.on('data', (d) => {
           console.log(d);
           rl.prompt();
