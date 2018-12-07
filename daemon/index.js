@@ -100,6 +100,7 @@ cliServer.on('conn', (c) => {
     m.on('hit', (pid) => {
       c.tell(`Registered hit on ${color.bgBlue(m.name)} (${color.bgBlue(m.id)}) pinID ${color.bgBlue(pid)})`);
     });
+    
   }
   for( let id in mons ) {
     let m = mons[id];
@@ -281,50 +282,90 @@ cliServer.on('conn', (c) => {
           let info = { pid : pid };
           c.tell('Piezo detected\n');
           c.ask('Name of piezo?').then( (ans) => {
-            info.name = ans.trim();
-            return c.ask('Minimum detection elevation?');
+            if (ans.trim().toLowerCase() =='stop'){
+              console.log("stop received 1");
+              chkQuit(ans.trim());
+            }else {
+              info.name = ans.trim();
+              return c.ask('Minimum detection elevation?');
+            }
           })
           .then( (ans) => {
-            info.el = { min : Number(ans) }
-            return c.ask('Maximum detection elevation?');
+            if (ans.trim().toLowerCase() =='stop'){
+              console.log("stop received 2");
+              chkQuit(ans.trim());
+            } else {
+              info.el = { min : Number(ans) }
+              return c.ask('Maximum detection elevation?');
+            }
           })
           .then( (ans) => {
-            info.el.max = Number(ans);
-            return c.ask('N, NE, E, SE, S, SW, W, or NW?');
+            if (ans.trim().toLowerCase() =='stop'){
+              console.log("stop received 3");
+              chkQuit(ans.trim());
+            } else {
+              info.el.max = Number(ans);
+              return c.ask('N, NE, E, SE, S, SW, W, or NW?');
+            }
           })
           .then( (ans) => {
-            info.dir = ans.trim();
-            info.fcdID = 1;
-            c.tell('Defaulting to tempered glass facade\n');
-            let piezo = mon.addPiezo(info);
-            c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
-						//mon.once('identify', ident);
-          });
+            if (ans.trim().toLowerCase() =='stop'){
+              console.log("stop received 4");
+              chkQuit(ans.trim());
+              kill();
+            } else {
+              info.dir = ans.trim();
+              info.fcdID = 1;
+              c.tell('Defaulting to tempered glass facade\n');
+              let piezo = mon.addPiezo(info);
+              c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
+              kill();
+            }
+          })
+          .catch( (err) => { c.tell(color.red(err.message)) });
 				}
 				
 				let kill =  () => 
 				{
 					mon.removeListener('identify', ident);
-					//mon.removeAllListeners('identify');
+					// mon.removeAllListeners('identify');
 					mon.removeListener('identTimeout', kill);
-					//mon.removeAllListeners('identTimeout');
+					// mon.removeAllListeners('identTimeout');
+          mon.identify(false);
+          c.removeListener('line', chkQuit);
+          // console.log(`AFTER REMOVE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}, chkQuit: ${c.listenerCount('chkQuit')}`);
+          // remove is working correctly!
 
 					c.tell(` --- Exiting Identify on ${mon.name} SubProgram ---\n`);
 					c.once('line', coreCmd);
-				}
-				
-        mon.once('identTimeout', kill);
-        mon.once('identify', ident);
-				let chkQuit = (l) => 
+        }
+        
+        /**
+         * Checks if 'stop' entered to quit ident subprogram
+         * @param {String} l 
+         */
+        let chkQuit = (l) => 
 				{
-          if( l == 'stop' ) {
-            c.removeListener('line', l);
+          console.log('in chkquit, entry: '+l);
+          if( l.trim().toLowerCase() == 'stop' ) {
             kill();
           }
-				}
-				
-        c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
-        c.once('line', coreCmd);
+        }
+
+				// console.log(`Listener count: ${mon.eventNames()}`);
+        // console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+        
+        // temporary fix - not sure why it's adding more listeners each time?
+        if(mon.listenerCount('identify') <1 && mon.listenerCount('identTimeout')<1){
+          mon.once('identTimeout', kill);
+          mon.once('identify', ident);
+
+          c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
+          c.once('line', coreCmd);
+          c.once('line', chkQuit);
+        }
+        // console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+        // eventually after calling ident more than 1 time, eventNames() has ident & identTimeout still listed			
         
         break;
       case 'mon-next-id': 
@@ -334,10 +375,10 @@ cliServer.on('conn', (c) => {
         break;
         //---New code
       case 'loc-next-id':
-      let lid = Location.nextID();
-      c.tell(` Next available location ID is ${lid}\n`);
-      c.once('line', coreCmd);
-      break;
+        let lid = Location.nextID();
+        c.tell(` Next available location ID is ${lid}\n`);
+        c.once('line', coreCmd);
+        break;
       //---
       case 'find-devs':
         Flasher.findDev().then( (devs) => {
