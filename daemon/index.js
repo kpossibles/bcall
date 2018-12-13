@@ -84,29 +84,29 @@ monServer.init().then( () => {
 const commands =
 `\n${color.underline.bold('COMMANDS')}
 ○ ${color.bgBlue.bold('.tutorial')}: ${color.reset('Getting started')}
-○ ${color.bgBlue.bold('.help')}: ${color.reset('lists all the commands')}
-○ ${color.bgBlue.bold('.q[uit] / .exit')}: ${color.reset('quits the program')}
-○ ${color.bgBlue.bold('mon-list')}: ${color.reset('list all the Monitors')}
-○ ${color.bgBlue.bold('mon-add')}: ${color.reset('add a new Monitor and flashes the Arduino code to the connected chip')}
-○ ${color.bgBlue.bold('ident <Monitor ID>')}: ${color.reset('identifies the piezo sensors to add to the system')}
-○ ${color.bgBlue.bold('find-devs')}: ${color.reset('finds the correct Arduino serial port when its connected to the system')}
-○ ${color.bgBlue.bold('loc-next-id')}: ${color.reset('find next available location ID')}
-○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('adds a new Monitor without flashing the arduino')}
-○ ${color.bgBlue.bold('facade-add')}: ${color.reset('add a new facade')}
-○ ${color.bgBlue.bold('facade-list')}: ${color.reset('list all the facades in the database')}
-○ ${color.bgBlue.bold('facade-change')}: ${color.reset('modify a pre-existing facade from the DB')}
-○ ${color.bgBlue.bold('piezo-list')}: ${color.reset('list all the piezo sensors')}
-○ ${color.bgBlue.bold('collision-list')}: ${color.reset('list collisions with criteria - time, piezo, direction, monitor, etc')}
-○ ${color.bgBlue.bold('export')}: ${color.reset('export database information criteria to CSV')}`;
+○ ${color.bgBlue.bold('.q[uit] / .exit')}: ${color.reset('Quits the program')}
+○ ${color.bgBlue.bold('mon-list')}: ${color.reset('List all the Monitors')}
+○ ${color.bgBlue.bold('mon-add')}: ${color.reset('Add a new Monitor and flashes the Arduino code to the connected chip')}
+○ ${color.bgBlue.bold('ident <Monitor ID>')}: ${color.reset('Identifies the piezo sensors to add to the system')}
+○ ${color.bgBlue.bold('find-devs')}: ${color.reset('Finds the correct Arduino serial port when its connected to the system. NOTE: Flashing in this program does not work ATM. Use Arduino IDE')}
+○ ${color.bgBlue.bold('loc-next-id')}: ${color.reset('Find next available location ID')}
+○ ${color.bgBlue.bold('loc-list')}: ${color.reset('List of all Locations')}
+○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('Adds a new Monitor without flashing the arduino')}
+○ ${color.bgBlue.bold('facade-add')}: ${color.reset('Add a new facade')}
+○ ${color.bgBlue.bold('facade-list')}: ${color.reset('List all the Facades')}
+○ ${color.bgBlue.bold('facade-change')}: ${color.reset('Modify a pre-existing facade from the DB')}
+○ ${color.bgBlue.bold('piezo-list')}: ${color.reset('List all the piezo sensors')}
+○ ${color.bgBlue.bold('collision-list')}: ${color.reset('List collisions with criteria - time, piezo, direction, monitor, etc')}
+○ ${color.bgBlue.bold('export')}: ${color.reset('Export database information criteria to CSV')}`;
 
 const tutorial = 
 `Welcome to BirdCALL! 
 
 Before getting started in this program, you must flash the embedded.ino code to the USB-connected Arduino chip (Feather M0 WiFi) using the Arduino IDE.
-1. Use command ${color.bgBlue('mon-add-info-only')} to correctly add a monitor to the system before starting up the Arduino chip.
-2. Next, use command ${color.bgBlue('ident <Monitor ID #>')} to add all the piezo sensors to the system
+1. Use command ${color.bgBlue('mon-add-info-only')} to add a monitor to the system BEFORE starting up the Arduino chip. System is limited to one monitor, so use Monitor ID = 1.
+2. Next, use command ${color.bgBlue('ident <Monitor ID #>')} to add all the piezo sensors to the system.
 3. Your BirdCALL program is ready to receive data!
-4. Use other commands under ${color.bgBlue('.help')} to modify, list, and export collected data.`;
+4. To view all available commands, enter ${color.bgBlue('.help')}`;
 
 cliServer.on('conn', (c) => {
   let monSetup = (m) => {
@@ -175,28 +175,27 @@ cliServer.on('conn', (c) => {
               c.once('line', coreCmd );
           });
           break;
-      case 'facade-change' :
-        METHODNAME = 'facade-change';
-        list = {};
-        if( args == undefined ) {
-          c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
-          c.once('line', coreCmd);
-          return;
-          }
-        list.id = args;
-        c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
-            list.name = ans.trim();
-            return c.ask('Description? (leave blank if no changes)')
+      case 'facade-change':
+          METHODNAME = 'facade-change';
+          list = {};
+          if( args == undefined ) {
+            c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
+            c.once('line', coreCmd);
+            return;
+            }
+          list.id = args;
+          c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
+              list.name = ans.trim();
+              return c.ask('Description? (leave blank if no changes)')
         }).then( (ans) =>{
-          list.desc = ans.trim();
-          if(list.desc =='' && list.name=='')
-            c.tell('No changes made.');
-          else {
-            let temp = Facade.edit(list);
-            if(temp)c.tell(`Facade id ${list.id} details changed\n`);
-            fcds = Facade.list();
-          }
-          c.once('line', coreCmd);
+            list.desc = ans.trim();
+            if(list.desc =='' && list.name=='')
+              c.tell('No changes made.');
+            else {
+              let temp = Facade.edit(list);
+              c.tell(`Facade id ${list.id} details changed\n`);
+              fcds = Facade.list();
+            }
         }).catch( (err) => { 
           color.red(c.tell(err.message));
           c.once('line', coreCmd );
@@ -204,10 +203,10 @@ cliServer.on('conn', (c) => {
         });
         break;
       case 'facade-list':
-          formatTable('facade');
-          c.tell(`\n`+table.toString());
-          c.once('line', coreCmd);
-          break;
+        formatTable('facade');
+        c.tell(`\n`+table.toString());
+        c.once('line', coreCmd);
+        break;
       case 'loc-list':
         formatTable('location');
         c.tell(`\n`+table.toString());
@@ -224,7 +223,7 @@ cliServer.on('conn', (c) => {
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
-      case 'mon-add' :
+      case 'mon-add' :   // Flasher does not work(?) Don't use this command for now.
         METHODNAME = 'mon-add';
         c.tell('This function is currently broken\n');
         c.once('line', coreCmd);
@@ -283,7 +282,9 @@ cliServer.on('conn', (c) => {
         })
         .then( (port) => new Promise( (resolve, reject) => {
           c.tell( `Flashing new monitor to device on port ${port}...` );
-          let f = () => Flasher.flash(port).then( () => resolve() ).catch( (err) => { c.tell( color.red(err.message) ); c.ask('Try again? (y[es]/no)').then( (ans) => { if( ans.startsWith('y') ) f(); else reject(err) } ) } );
+          let f = () => Flasher.flash(port).then( () => resolve() ).catch( (err) => 
+          { c.tell( color.red(err.message) ); c.ask('Try again? (y[es]/no)').then( (ans) => 
+            { if( ans.startsWith('y') ) f(); else reject(err) } ) } );
           f();
         }) )
         .then( () => {
@@ -307,7 +308,7 @@ cliServer.on('conn', (c) => {
           c.once('line', coreCmd );
         })
         break;
-      case 'ident' :
+      case 'ident': // This takes one argument
         METHODNAME = 'ident';
 				if( ! mons[args] ) 
 				{
@@ -347,21 +348,26 @@ cliServer.on('conn', (c) => {
               chkQuit(ans);
               info.el.max = Number(ans);
               return c.ask('N, NE, E, SE, S, SW, W, or NW?');
+              
             })
             .then( (ans) => {
               chkQuit(ans);
               info.dir = ans.trim();
               formatTable('facade');
               c.tell(`\nExisting Facades\n`+table.toString());
-              c.ask('What facade ID do you want to use? (leave blank for default)');
+              return c.ask('What facade ID do you want to use? (leave blank for default)');
+              
             })
             .then( (ans) => {
               chkQuit(ans);
-              if(ans.trim() ==""){
+              if(ans != undefined && ans != "")
+              {
+                info.fcdID = parseInt(ans.trim());
+              } 
+              else 
+              {
                 info.fcdID = 1;
                 c.tell('Defaulting to tempered glass facade\n');
-              } else {
-                info.fcdID = ans.trim();
               }
               
               let piezo = mon.addPiezo(info);
@@ -403,8 +409,8 @@ cliServer.on('conn', (c) => {
           }
         }
 
-				// console.log(`Listeners: ${mon.eventNames()}`);
-        // console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+				console.log(`Listeners: ${mon.eventNames()}`);
+        console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
         
         // if(mon.listenerCount('identify') ==0 && mon.listenerCount('identTimeout')==0){
           // mon.once('identTimeout', kill);
@@ -414,7 +420,7 @@ cliServer.on('conn', (c) => {
           c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
           // c.once('line', coreCmd);
         // }
-        // console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+        console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
         // eventually after calling ident more than 1 time, eventNames() has ident & identTimeout still listed			
         
         break;
