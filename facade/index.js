@@ -41,14 +41,14 @@ module.exports=( () => {
         let res='';
         try{
             if(typeof opts.id!='undefined') {
-                if(opts.desc!='' || opts.name!=''){
-                    if(opts.name!='')
-                        res = mystmts.change.name.run({name : opts.name, id : opts.id}); 
-                    else if(opts.desc!='')
-                        res = mystmts.change.desc.run({desc : opts.desc, id : opts.id}); 
-                }
-                else
-                    res = mystmts.change.all.run(opts);
+              if(opts.desc!='' && opts.name!=''){
+                  console.log("in facade.edit all");
+                  res = mystmts.change.all.run(opts); 
+              } else if(opts.desc == '')
+                res = mystmts.change.name.run({name : opts.name, id : opts.id}); 
+              else if(opts.name == '')
+                res = mystmts.change.desc.run({desc : opts.desc, id : opts.id});
+                
                 if(res.changes != 1) throw new Error();
                 console.log(`FACADE EDIT: Changes made on ${opts.id}!`);
                 return true;
