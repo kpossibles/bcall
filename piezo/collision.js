@@ -1,6 +1,8 @@
 require('phxerrors');
 const { is, errSwitcher } = require('phxutils');
 const { db } = require('../common');
+const json2csv = require('json2csv').parse;
+const fs = require('fs'); 
 const CLASSNAME = 'Collision';
 
 module.exports = ( () => {
@@ -60,6 +62,40 @@ module.exports = ( () => {
           output.push( new Collision(row.COLL_ID) );
         });
         return output;
+      }
+      catch( err ) { errSwitcher(CLASSNAME, METHODNAME, err) }
+    }
+
+    static export(){
+      let METHODNAME = 'export()';
+      try {
+        let filename ='';
+        console.log('in export()');
+        let output = [];
+        db.prepare(`SELECT * from COLLISION ORDER BY COLL_TSTAMP DESC`).all().forEach( (row) => {
+          let me = {
+            piezoID : row.PIEZO_ID,
+            estEl : row.COLL_EST_EL,
+            wave : row.COLL_WAVE,
+            tstamp : new Date(row.COLL_TSTAMP).toString()
+          }
+          output.push(me);
+        });
+        var fields = ['piezoID', 'estEl', 'wave', 'tstamp'];
+        const opts = { fields };
+        try{
+          let csv = json2csv(output,opts);
+          let date = Date.now().toLocaleDateString;
+          filename = "BirdCALL "+date+".csv";
+          fs.writeFile(filename, csv, function(err) {
+            if (err) throw err;
+            console.log(filename+' - file saved');
+          });
+          return filename;
+        }catch(err){
+          console.log(err);
+        }
+        return filename; //should be ''
       }
       catch( err ) { errSwitcher(CLASSNAME, METHODNAME, err) }
     }
