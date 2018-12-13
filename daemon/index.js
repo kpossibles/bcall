@@ -12,12 +12,17 @@ const BCALL_DIR = process.env.BCALL_DIR;
 const Facade = require('../facade');
 const color = require('ansi-colors');
 const Table = require('cli-table');
+const Piezo = require('../piezo')
+const { db } = require('../common');
+const CLASSNAME = 'Daemon';
+let METHODNAME = '';
 
 const monServer = Monitor.server();
 const cliServer = new CLI.Server('/tmp/bcall');
 let mons = Monitor.list();
 let fcds = Facade.list();
 let locs = Location.list();
+let piezos = Piezo.list();
 let table = new Table();
 
 /**
@@ -25,6 +30,7 @@ let table = new Table();
  * @param {String} type 
  */
 let formatTable = (type) => {
+  METHODNAME += '- formatTable';
   if(type == 'facade') {
     table = new Table({
       head: ['ID','Name', 'Description'],
@@ -52,6 +58,16 @@ let formatTable = (type) => {
     });
     for( let i in mons ) {
       table.push([mons[i].id, mons[i].name, mons[i].isActive, mons[i].piezoCount]);
+    }
+  } else if (type == 'piezo') {
+    table = new Table({
+      // head: ['ID', 'Name', 'Direction', 'Min Elevation', 'Max Elevation', 'Pin ID'],
+      head: ['ID', 'Name', 'Direction'],
+      style: {head: ['magenta'], border: ['grey']}
+    });
+    for( let i in piezos ) {
+      // table.push([piezos[i].id, piezos[i].name, piezos[i].dir, piezos[i].min, piezos[i].max, piezos[i].pid ]);
+      table.push([piezos[i].id, piezos[i].name, piezos[i].dir]);
     }
   } else {
     table = new Table();
@@ -120,6 +136,12 @@ cliServer.on('conn', (c) => {
     if( cmd == '' )
       return;
     switch( cmd ) {
+      case 'test':
+          METHODNAME = 'test'
+          if(args!=undefined)
+              c.tell(`Facade ${args}: `+Facade.id);
+          c.once('line', coreCmd );
+          break;
 			case '.tutorial':
 				c.tell(tutorial);
 				c.once('line', coreCmd);
@@ -128,10 +150,16 @@ cliServer.on('conn', (c) => {
         c.tell(commands);
         c.once('line', coreCmd);
         break;
+      case 'export':
+        let csvName = Piezo.export();
+        if(csvName != '') c.tell(`Export complete! - ${csvName} saved in ${color.bgBlue.bold('$BCALL_DIR/bin')}`);
+        c.once('line', coreCmd);
+        break;
       // new code
       case 'facade-add' :
+          METHODNAME = 'facade-add';
           let finfo = {};
-            c.ask('Name of Facade?').then( (ans) => {
+          c.ask('Name of Facade?').then( (ans) => {
                 finfo.name = ans.trim();
                 return c.ask('Facade description?');
           }).then ( (ans)=>{
@@ -140,17 +168,15 @@ cliServer.on('conn', (c) => {
               c.tell(`${finfo.name} with ID: ${fcd} added\n`);
               fcds = Facade.list();
           })
-          .catch( (err) => { color.red(c.tell(err.message)) })
+          .catch( (err) => { 
+            errSwitcher( CLASSNAME, METHODNAME, err );
+            color.red(c.tell(err.message)) })
           .then ( ()=>{
               c.once('line', coreCmd );
           });
           break;
-      case 'test':
-          if(args!=undefined)
-              c.tell(`Facade ${args}: `+Facade.id);
-          c.once('line', coreCmd );
-          break;
       case 'facade-change' :
+          METHODNAME = 'facade-change';
           list = {};
           if( args == undefined ) {
             c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
@@ -167,10 +193,11 @@ cliServer.on('conn', (c) => {
             c.tell(`Facade id ${list.id} details changed ${temp}\n`);
             fcds = Facade.list();
               
-        }).catch( (err) => { color.red(c.tell(err.message)) })
-          .then ( ()=>{
-              c.once('line', coreCmd );
-          });
+        }).catch( (err) => { 
+          color.red(c.tell(err.message));
+          c.once('line', coreCmd );
+          errSwitcher( CLASSNAME, METHODNAME, err ); 
+        });
           break;
       case 'facade-list':
           formatTable('facade');
@@ -182,6 +209,11 @@ cliServer.on('conn', (c) => {
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
+      case 'piezo-list':
+        formatTable('piezo');
+        c.tell(`\n`+table.toString());
+        c.once('line', coreCmd);
+        break;
       //new code end
       case 'mon-list' :
         formatTable('monitor');
@@ -189,6 +221,7 @@ cliServer.on('conn', (c) => {
         c.once('line', coreCmd);
         break;
       case 'mon-add' :
+        METHODNAME = 'mon-add';
         c.tell('This function is currently broken\n');
         c.once('line', coreCmd);
         return;
@@ -198,8 +231,8 @@ cliServer.on('conn', (c) => {
         c.ask('WiFi SSID (name) running monitor on?').then( (ans) => {
           cfg.ssid = ans.trim();
           return c.ask('WiFi PSK (password)?')
-    })
-    .then( (ans) => {
+        })
+        .then( (ans) => {
           cfg.psk = ans.trim();
           let ips = localIPs();
           let t = 'Found local IPs: ';
@@ -261,13 +294,17 @@ cliServer.on('conn', (c) => {
         .then( (name) => {
           c.tell( `Monitor ${name} created\n` );
         })
-        .catch( (err) => { c.tell(color.red(err.message)) })
+        .catch( (err) => { 
+          c.tell(color.red(err.message))
+          errSwitcher( CLASSNAME, METHODNAME, err )
+        })
         .then( () => {
           c.tell( ' --- Exiting Monitor Flashing SubProgram ---\n' );
           c.once('line', coreCmd );
         })
         break;
       case 'ident' :
+        METHODNAME = 'ident';
 				if( ! mons[args] ) 
 				{
           c.tell(`Invalid monitor ID; command is ${color.bgBlue('ident [ID]')}`);
@@ -276,64 +313,87 @@ cliServer.on('conn', (c) => {
         }
         let mon = mons[args];
 				mon.identify(true);
-				
+        
+        /**
+         * Identifies the piezo with given pid
+         * @param {*} pid 
+         */
 				let ident = (pid) => 
 				{
-          let info = { pid : pid };
-          c.tell('Piezo detected\n');
-          c.ask('Name of piezo?').then( (ans) => {
-            if (ans.trim().toLowerCase() =='stop'){
-              console.log("stop received 1");
-              chkQuit(ans.trim());
-            }else {
+          let notInDb = true;
+          if(piezos[pid] != undefined){
+            notInDb = false;
+            c.tell(`Piezo ${pid} already identified!`);
+            kill();
+          }
+          if(notInDb) {
+            let info = { pid : pid };
+            c.tell(`Piezo detected - PIN ID: ${pid}\n`);
+            c.ask('Name of piezo?').then( (ans) => {
+              chkQuit(ans);
               info.name = ans.trim();
               return c.ask('Minimum detection elevation?');
-            }
-          })
-          .then( (ans) => {
-            if (ans.trim().toLowerCase() =='stop'){
-              console.log("stop received 2");
-              chkQuit(ans.trim());
-            } else {
+            })
+            .then( (ans) => {
+              chkQuit(ans);
               info.el = { min : Number(ans) }
               return c.ask('Maximum detection elevation?');
-            }
-          })
-          .then( (ans) => {
-            if (ans.trim().toLowerCase() =='stop'){
-              console.log("stop received 3");
-              chkQuit(ans.trim());
-            } else {
-              info.el.max = Number(ans);
-              return c.ask('N, NE, E, SE, S, SW, W, or NW?');
-            }
-          })
-          .then( (ans) => {
-            if (ans.trim().toLowerCase() =='stop'){
-              console.log("stop received 4");
-              chkQuit(ans.trim());
+            })
+            .then( (ans) => {
+              if (ans!=undefined && ans.trim().toLowerCase() =='stop'){
+                // console.log("stop received 3");
+                return "stop";
+              } else {
+                info.el.max = Number(ans);
+                return c.ask('N, NE, E, SE, S, SW, W, or NW?');
+              }
+            })
+            .then( (ans) => {
+              if (ans!=undefined && ans.trim().toLowerCase() =='stop'){
+                // console.log("stop received 4");
+                return "stop";
+              } else {
+                info.dir = ans.trim();
+                formatTable('facade');
+                c.tell(`\nExisting Facades\n`+table.toString());
+                c.ask('What facade ID do you want to use? (leave blank for default)');
+              }
+            })
+            .then( (ans) => {
+              if (ans!=undefined && ans.trim().toLowerCase() =='stop'){
+                // console.log("stop received 5");
+                chkQuit("stop");
+              } else {
+                if(ans.trim() ==""){
+                  info.fcdID = 1;
+                  c.tell('Defaulting to tempered glass facade\n');
+                } else {
+                  info.fcdID = ans.trim();
+                }
+                
+                let piezo = mon.addPiezo(info);
+                c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
+                piezos = Piezo.list();
+                kill();
+              }
+            })
+            .catch( (err) => { 
+              c.tell(color.red(err.message)) 
               kill();
-            } else {
-              info.dir = ans.trim();
-              info.fcdID = 1;
-              c.tell('Defaulting to tempered glass facade\n');
-              let piezo = mon.addPiezo(info);
-              c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
-              kill();
-            }
-          })
-          .catch( (err) => { c.tell(color.red(err.message)) });
+              errSwitcher( CLASSNAME, METHODNAME, err );
+            });
+          }
 				}
 				
 				let kill =  () => 
 				{
-					mon.removeListener('identify', ident);
-					// mon.removeAllListeners('identify');
-					mon.removeListener('identTimeout', kill);
-					// mon.removeAllListeners('identTimeout');
           mon.identify(false);
+					// mon.removeListener('identTimeout', kill);
+					mon.removeListener('identify', ident);
+					// mon.removeListener('identTimeout', kill);
           c.removeListener('line', chkQuit);
           // console.log(`AFTER REMOVE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}, chkQuit: ${c.listenerCount('chkQuit')}`);
+          // console.log(`---kill() - Listeners: ${mon.eventNames()}\n`);
           // remove is working correctly!
 
 					c.tell(` --- Exiting Identify on ${mon.name} SubProgram ---\n`);
@@ -342,29 +402,27 @@ cliServer.on('conn', (c) => {
         
         /**
          * Checks if 'stop' entered to quit ident subprogram
-         * @param {String} l 
+         * @param {String} str 
          */
-        let chkQuit = (l) => 
+        let chkQuit = (str) => 
 				{
-          console.log('in chkquit, entry: '+l);
-          if( l.trim().toLowerCase() == 'stop' ) {
+          if( str!=undefined && str.trim().toLowerCase() == 'stop' ) {
             kill();
           }
         }
 
-				// console.log(`Listener count: ${mon.eventNames()}`);
-        // console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+				console.log(`Listeners: ${mon.eventNames()}`);
+        console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
         
-        // temporary fix - not sure why it's adding more listeners each time?
-        if(mon.listenerCount('identify') <1 && mon.listenerCount('identTimeout')<1){
-          mon.once('identTimeout', kill);
+        // if(mon.listenerCount('identify') ==0 && mon.listenerCount('identTimeout')==0){
+          // mon.once('identTimeout', kill);
           mon.once('identify', ident);
+          c.once('line', chkQuit);
 
           c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
-          c.once('line', coreCmd);
-          c.once('line', chkQuit);
-        }
-        // console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+          // c.once('line', coreCmd);
+        // }
+        console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
         // eventually after calling ident more than 1 time, eventNames() has ident & identTimeout still listed			
         
         break;
