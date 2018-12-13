@@ -152,7 +152,7 @@ cliServer.on('conn', (c) => {
         break;
       case 'export':
         let csvName = Piezo.export();
-        if(csvName != '') c.tell(`Export complete! - ${csvName} saved in ${color.bgBlue.bold('$BCALL_DIR/bin')}`);
+        if(csvName != '') c.tell(`Export complete! - ${csvName} saved in ${color.bgBlue.bold('$BCALL_DIR/export')}`);
         c.once('line', coreCmd);
         break;
       // new code
@@ -176,29 +176,33 @@ cliServer.on('conn', (c) => {
           });
           break;
       case 'facade-change' :
-          METHODNAME = 'facade-change';
-          list = {};
-          if( args == undefined ) {
-            c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
-            c.once('line', coreCmd);
-            return;
-            }
-          list.id = args;
-          c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
-              list.name = ans.trim();
-              return c.ask('Description? (leave blank if no changes)')
+        METHODNAME = 'facade-change';
+        list = {};
+        if( args == undefined ) {
+          c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
+          c.once('line', coreCmd);
+          return;
+          }
+        list.id = args;
+        c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
+            list.name = ans.trim();
+            return c.ask('Description? (leave blank if no changes)')
         }).then( (ans) =>{
-            list.desc = ans.trim();
+          list.desc = ans.trim();
+          if(list.desc =='' && list.name=='')
+            c.tell('No changes made.');
+          else {
             let temp = Facade.edit(list);
-            c.tell(`Facade id ${list.id} details changed ${temp}\n`);
+            if(temp)c.tell(`Facade id ${list.id} details changed\n`);
             fcds = Facade.list();
-              
+          }
+          c.once('line', coreCmd);
         }).catch( (err) => { 
           color.red(c.tell(err.message));
           c.once('line', coreCmd );
           errSwitcher( CLASSNAME, METHODNAME, err ); 
         });
-          break;
+        break;
       case 'facade-list':
           formatTable('facade');
           c.tell(`\n`+table.toString());
@@ -340,42 +344,30 @@ cliServer.on('conn', (c) => {
               return c.ask('Maximum detection elevation?');
             })
             .then( (ans) => {
-              if (ans!=undefined && ans.trim().toLowerCase() =='stop'){
-                // console.log("stop received 3");
-                return "stop";
-              } else {
-                info.el.max = Number(ans);
-                return c.ask('N, NE, E, SE, S, SW, W, or NW?');
-              }
+              chkQuit(ans);
+              info.el.max = Number(ans);
+              return c.ask('N, NE, E, SE, S, SW, W, or NW?');
             })
             .then( (ans) => {
-              if (ans!=undefined && ans.trim().toLowerCase() =='stop'){
-                // console.log("stop received 4");
-                return "stop";
-              } else {
-                info.dir = ans.trim();
-                formatTable('facade');
-                c.tell(`\nExisting Facades\n`+table.toString());
-                c.ask('What facade ID do you want to use? (leave blank for default)');
-              }
+              chkQuit(ans);
+              info.dir = ans.trim();
+              formatTable('facade');
+              c.tell(`\nExisting Facades\n`+table.toString());
+              c.ask('What facade ID do you want to use? (leave blank for default)');
             })
             .then( (ans) => {
-              if (ans!=undefined && ans.trim().toLowerCase() =='stop'){
-                // console.log("stop received 5");
-                chkQuit("stop");
+              chkQuit(ans);
+              if(ans.trim() ==""){
+                info.fcdID = 1;
+                c.tell('Defaulting to tempered glass facade\n');
               } else {
-                if(ans.trim() ==""){
-                  info.fcdID = 1;
-                  c.tell('Defaulting to tempered glass facade\n');
-                } else {
-                  info.fcdID = ans.trim();
-                }
-                
-                let piezo = mon.addPiezo(info);
-                c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
-                piezos = Piezo.list();
-                kill();
+                info.fcdID = ans.trim();
               }
+              
+              let piezo = mon.addPiezo(info);
+              c.tell(`${piezo.name} successfully added to ${mon.name}\n`);
+              piezos = Piezo.list();
+              kill();
             })
             .catch( (err) => { 
               c.tell(color.red(err.message)) 
@@ -411,8 +403,8 @@ cliServer.on('conn', (c) => {
           }
         }
 
-				console.log(`Listeners: ${mon.eventNames()}`);
-        console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+				// console.log(`Listeners: ${mon.eventNames()}`);
+        // console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
         
         // if(mon.listenerCount('identify') ==0 && mon.listenerCount('identTimeout')==0){
           // mon.once('identTimeout', kill);
@@ -422,7 +414,7 @@ cliServer.on('conn', (c) => {
           c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
           // c.once('line', coreCmd);
         // }
-        console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
+        // console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
         // eventually after calling ident more than 1 time, eventNames() has ident & identTimeout still listed			
         
         break;

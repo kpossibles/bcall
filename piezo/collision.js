@@ -70,7 +70,6 @@ module.exports = ( () => {
       let METHODNAME = 'export()';
       try {
         let filename ='';
-        console.log('in export()');
         let output = [];
         db.prepare(`SELECT * from COLLISION ORDER BY COLL_TSTAMP DESC`).all().forEach( (row) => {
           let me = {
@@ -85,9 +84,15 @@ module.exports = ( () => {
         const opts = { fields };
         try{
           let csv = json2csv(output,opts);
-          let date = Date.now().toLocaleDateString;
-          filename = "BirdCALL "+date+".csv";
-          fs.writeFile(filename, csv, function(err) {
+          let date = new Date().toLocaleDateString();
+          date = date.replace(/\//g, '-');
+          filename = `BirdCALL ${date}.csv`;
+          let dir = '../export/';
+          let filenameExp = dir+filename;
+          if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir);
+          }
+          fs.writeFile(filenameExp, csv, function(err) {
             if (err) throw err;
             console.log(filename+' - file saved');
           });
@@ -95,7 +100,7 @@ module.exports = ( () => {
         }catch(err){
           console.log(err);
         }
-        return filename; //should be ''
+        return '';
       }
       catch( err ) { errSwitcher(CLASSNAME, METHODNAME, err) }
     }
