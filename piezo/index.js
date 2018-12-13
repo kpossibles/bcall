@@ -49,17 +49,22 @@ module.exports = ( () => {
       }
       catch( err ) { errSwitcher( CLASSNAME, METHODNAME, err ) }
     }
-    
     /**
-     * Removes a piezo from the database
-     * @param id {integer} ID of piezo to delete
-     * @returns {integer} ID removed on success, -1 on failure
+     * Compile a list of all piezos in the system
+     * @returns {JSON} Array of all piezo
      */
-    static rm( id ) {
-      let METHODNAME = 'rm(id)';
-      let res = db.prepare(`DELETE FROM PIEZO WHERE PIEZO_ID = ${id}`).run();
-      if( res.changes != 0 ) return id;
-      return -1;
+    static list() {
+      let METHODNAME = 'list()';
+      try {
+        let res = db.prepare("SELECT PIEZO_ID FROM PIEZO WHERE PIEZO_ID > 0 ORDER BY PIEZO_ID DESC").all();
+        let output = {};
+        res.forEach( (row) => {
+          let cur = new Piezo(row.PIEZO_ID);
+          output[cur.pinID] = cur;
+        });
+        return output;
+      }
+      catch( err ) { errSwitcher( CLASSNAME, METHODNAME, err ) }
     }
     
     /**
@@ -81,6 +86,18 @@ module.exports = ( () => {
       catch(err) { errSwitcher(CLASSNAME, METHODNAME, err) }
     }
     
+    /**
+     * Calls Collision.export() to export Collisions to csv
+     * @returns {String} csvName
+     */
+    static export(){
+      let METHODNAME = 'export()';
+      try {
+        let csvName = Collision.export();
+        return csvName;
+      }
+      catch(err) { errSwitcher(CLASSNAME, METHODNAME, err) }
+    }
     /**
      * Data structure representing an individual piezo
      * @param id {integer} The ID of the piezo to construct
