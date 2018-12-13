@@ -7,6 +7,7 @@ const MonServer = require('./monserver');
 const { is, errSwitcher, exists } = require('phxutils');
 const { db } = require('../common');
 const CLASSNAME = 'Monitor';
+const color = require('ansi-colors');
 
 module.exports=( () => {
   let _ = new WeakMap();
@@ -103,25 +104,28 @@ module.exports=( () => {
     }
     
     /**
-     * Turn on identify function. When the monitor is identifying and recieves a hit, it will emit the event 'identify' with the corresponding piezo identifier. Times out after 30s.
+     * Turn on identify function. When the monitor is identifying and recieves a hit, 
+     * it will emit the event 'identify' with the corresponding piezo identifier. 
      * @param which {boolean} True = turn on, false = turn off
      * @returns {void}
     */
     identify(which) {
-      clearTimeout( _.get(this).identTimeout );
+      // clearTimeout( _.get(this).identTimeout );
       if( which ) {
         _.get(this).ident = true;
-        _.get(this).identTimeout = setTimeout( () => { 
-          _.get(this).ident = false;
-          this.emit('identTimeout');
-        }, 30000 );
+        // _.get(this).identTimeout = setTimeout( () => { 
+        //   _.get(this).ident = false;
+        //   this.emit('identTimeout');
+        // }, 30000 );
       }
-      else
+      else{
         _.get(this).ident = false;
+      }
     }
 
     /**
-     * Add a network socket connection. This will listen to a socket and cause the class to emit events.
+     * Add a network socket connection. This will listen to a socket and 
+     * cause the class to emit events.
      * @param conn {net.Socket} The socket to listen to
      * @fires 'hit'
      * @fires 'timeout'
@@ -148,7 +152,7 @@ module.exports=( () => {
           return;
         }
         if( ! this.piezos[ d.piezo ] ) {
-          let warn = `[WARNING] Monitor ${this.id} - ${this.name}: Hit from unregistered pin while not in identify mode`;
+          let warn = `${color.red.bold('[WARNING]')} Monitor ${this.id} - ${this.name}: Hit from unregistered pin ${d.piezo} while not in identify mode`;
           console.log(warn);
           this.emit('unregistered', { piezo : d.piezo, warn : warn });
           return;
