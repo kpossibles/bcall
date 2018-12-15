@@ -459,12 +459,13 @@ cliServer.on('conn', (c) => {
         if (locInfo.name != '' && locInfo.addr != '') {
           try {
             let locNextID = Location.nextID();
-            let loc = new Location(Location.create(locInfo));
+            // let loc = new Location(Location.create(locInfo));
+            Location.create(locInfo);
             c.tell('New location successfully created')
-            locs=Location.list();
-            let locGetID = loc.id();
+            // locs=Location.list();
+            // let locGetID = loc.id();
             //c.tell(`Next locID before adding new loc: ${locNextID}. locID of new loc: ${logGetID}\n`);
-            monInfo.locID = LocNextID;
+            monInfo.locID = locNextID;
           }
           catch(err) {
             c.tell( color.red(err.message + '\n' + '(ERROR) Location will default to UWM SARUP' + '\n'));
