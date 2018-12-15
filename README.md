@@ -27,9 +27,13 @@ Now you need to set up an environment variable that will point to the installati
 
 ``` $ echo export BCALL_DIR=/home/bcall/bcall2 >> ~/.profile ```
 
-Now you need to ensure that your user has permissions to access the serial ports by adding it to the group dialer (following example assumes user name is bcall ):
+Now you need to ensure that your user has permissions to access the serial ports by adding it to the group dialer for flashing the embedded code to the Arduino chip (following example assumes user name is bcall):
 
 ``` # useradd -g dialer bcall ```
+
+Dialout via OpenSUSE
+
+```sudo usermod -a -G dialout bcall```
 
 Now reboot so the last two changes take effect
 
