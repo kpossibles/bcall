@@ -86,9 +86,9 @@ const commands =
 ○ ${color.bgBlue.bold('.tutorial')}: ${color.reset('Getting started')}
 ○ ${color.bgBlue.bold('.q[uit] / .exit')}: ${color.reset('Quits the program')}
 ○ ${color.bgBlue.bold('mon-list')}: ${color.reset('List all the Monitors')}
-○ ${color.bgBlue.bold('mon-add')}: ${color.reset('Add a new Monitor and flashes the Arduino code to the connected chip')}
+○ ${color.bgBlue.bold('mon-add')}: ${color.reset('Add a new Monitor and flashes the Arduino code to the connected chip. NOTE: Flashing in this program does not work ATM. Use Arduino IDE')}
 ○ ${color.bgBlue.bold('ident <Monitor ID>')}: ${color.reset('Identifies the piezo sensors to add to the system')}
-○ ${color.bgBlue.bold('find-devs')}: ${color.reset('Finds the correct Arduino serial port when its connected to the system. NOTE: Flashing in this program does not work ATM. Use Arduino IDE')}
+○ ${color.bgBlue.bold('find-devs')}: ${color.reset('Finds the correct Arduino serial port when its connected to the system.')}
 ○ ${color.bgBlue.bold('loc-next-id')}: ${color.reset('Find next available location ID')}
 ○ ${color.bgBlue.bold('loc-list')}: ${color.reset('List of all Locations')}
 ○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('Adds a new Monitor without flashing the arduino')}
@@ -200,6 +200,9 @@ cliServer.on('conn', (c) => {
           color.red(c.tell(err.message));
           c.once('line', coreCmd );
           errSwitcher( CLASSNAME, METHODNAME, err ); 
+        })
+        .then ( ()=>{
+          c.once('line', coreCmd );
         });
         break;
       case 'facade-list':
@@ -211,7 +214,7 @@ cliServer.on('conn', (c) => {
         formatTable('location');
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
-        break;
+        break;facade-ch
       case 'piezo-list':
         formatTable('piezo');
         c.tell(`\n`+table.toString());

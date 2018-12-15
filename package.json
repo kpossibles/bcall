@@ -1,23 +1,23 @@
 {
-  "_from": "git+https://github.com/leithouse/bcall.git",
+  "_from": "git+https://github.com/kpossibles/bcall.git",
   "_id": "bcall2@1.0.0",
   "_inBundle": false,
   "_location": "/bcall2",
   "_phantomChildren": {},
   "_requested": {
     "type": "git",
-    "raw": "git+https://github.com/leithouse/bcall.git",
-    "rawSpec": "git+https://github.com/leithouse/bcall.git",
-    "saveSpec": "git+https://github.com/leithouse/bcall.git",
-    "fetchSpec": "https://github.com/leithouse/bcall.git",
+    "raw": "git+https://github.com/kpossibles/bcall.git",
+    "rawSpec": "git+https://github.com/kpossibles/bcall.git",
+    "saveSpec": "git+https://github.com/kpossibles/bcall.git",
+    "fetchSpec": "https://github.com/kpossibles/bcall.git",
     "gitCommittish": null
   },
   "_requiredBy": [
     "#USER",
     "/"
   ],
-  "_resolved": "git+https://github.com/leithouse/bcall.git#6b4b1c2ffc04fb9846fade1ac76d308329810225",
-  "_spec": "git+https://github.com/leithouse/bcall.git",
+  "_resolved": "git+https://github.com/kpossibles/bcall/#7a06c7a73e4ed879544dd74cc7086d61cca1e92d",
+  "_spec": "git+https://github.com/kpossibles/bcall.git",
   "_where": "/home/BirdNEST",
   "author": {
     "name": "Andrew Leitheiser",
@@ -25,13 +25,7 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "ansi-colors": "^3.2.1",
-    "ansi-styles": "^3.2.1",
     "better-sqlite3": "^4.1.4",
-    "cfonts": "^2.3.0",
-    "cli-table": "^0.3.1",
-    "gradient-string": "^1.2.0",
-    "json2csv": "^4.3.2",
     "node-geocoder": "^3.22.0",
     "phxerrors": "git+https://oauth2:Qy63GycYbEanezz4yUDi@git.pdcbiz.com/utilities/phxerrors.git",
     "phxutils": "git+https://oauth2:Qy63GycYbEanezz4yUDi@git.pdcbiz.com/utilities/phxutils.git",
