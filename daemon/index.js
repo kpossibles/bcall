@@ -87,16 +87,15 @@ const commands =
 ○ ${color.bgBlue.bold('.q[uit] / .exit')}: ${color.reset('Quits the program')}
 ○ ${color.bgBlue.bold('mon-list')}: ${color.reset('List all the Monitors')}
 ○ ${color.bgBlue.bold('mon-add')}: ${color.reset('Add a new Monitor and flashes the Arduino code to the connected chip. NOTE: Flashing in this program does not work ATM. Use Arduino IDE')}
+○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('Adds a new Monitor without flashing the arduino')}
 ○ ${color.bgBlue.bold('ident <Monitor ID>')}: ${color.reset('Identifies the piezo sensors to add to the system')}
 ○ ${color.bgBlue.bold('find-devs')}: ${color.reset('Finds the correct Arduino serial port when its connected to the system.')}
+○ ${color.bgBlue.bold('piezo-list')}: ${color.reset('List all the piezo sensors')}
 ○ ${color.bgBlue.bold('loc-next-id')}: ${color.reset('Find next available location ID')}
 ○ ${color.bgBlue.bold('loc-list')}: ${color.reset('List of all Locations')}
-○ ${color.bgBlue.bold('mon-add-info-only')}: ${color.reset('Adds a new Monitor without flashing the arduino')}
 ○ ${color.bgBlue.bold('facade-add')}: ${color.reset('Add a new facade')}
 ○ ${color.bgBlue.bold('facade-list')}: ${color.reset('List all the Facades')}
 ○ ${color.bgBlue.bold('facade-change')}: ${color.reset('Modify a pre-existing facade from the DB')}
-○ ${color.bgBlue.bold('piezo-list')}: ${color.reset('List all the piezo sensors')}
-○ ${color.bgBlue.bold('collision-list')}: ${color.reset('List collisions with criteria - time, piezo, direction, monitor, etc')}
 ○ ${color.bgBlue.bold('export')}: ${color.reset('Export database information criteria to CSV')}`;
 
 const tutorial = 
@@ -176,46 +175,51 @@ cliServer.on('conn', (c) => {
           });
           break;
       case 'facade-change':
-          METHODNAME = 'facade-change';
-          list = {};
-          if( args == undefined ) {
-            c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
-            c.once('line', coreCmd);
-            return;
-            }
-          list.id = args;
-          c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
-              list.name = ans.trim();
-              return c.ask('Description? (leave blank if no changes)')
+        METHODNAME = 'facade-change';
+        list = {};
+        if( args == undefined ) {
+          c.tell(`Invalid facade ID; command is ${color.bgBlue('facade-change [ID]')}`);
+          c.once('line', coreCmd);
+          return;
+          }
+        list.id = args;
+        c.ask('Name of Facade? (leave blank if no changes)').then( (ans) => {
+            list.name = ans.trim();
+            return c.ask('Description? (leave blank if no changes)')
         }).then( (ans) =>{
-            list.desc = ans.trim();
-            if(list.desc =='' && list.name=='')
-              c.tell('No changes made.');
-            else {
-              let temp = Facade.edit(list);
-              c.tell(`Facade id ${list.id} details changed\n`);
-              fcds = Facade.list();
-            }
+          list.desc = ans.trim();
+          if(list.desc =='' && list.name==''){
+            c.tell('No changes made.');
+            c.once('line', coreCmd );
+          } else {
+            let temp = Facade.edit(list);
+            if(temp) c.tell(`Facade id ${list.id} details changed`);
+            else c.tell(`No changes were made\n`);
+            fcds = Facade.list();
+            c.once('line', coreCmd );
+            
+          }
+          return;
         }).catch( (err) => { 
           color.red(c.tell(err.message));
           c.once('line', coreCmd );
           errSwitcher( CLASSNAME, METHODNAME, err ); 
-        })
-        .then ( ()=>{
-          c.once('line', coreCmd );
         });
         break;
       case 'facade-list':
+        fcds=Facade.list();
         formatTable('facade');
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;
       case 'loc-list':
+        locs=Location.list();
         formatTable('location');
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
         break;facade-ch
       case 'piezo-list':
+        piezos=Piezo.list();
         formatTable('piezo');
         c.tell(`\n`+table.toString());
         c.once('line', coreCmd);
@@ -412,19 +416,10 @@ cliServer.on('conn', (c) => {
           }
         }
 
-				console.log(`Listeners: ${mon.eventNames()}`);
-        console.log(`BEFORE - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
-        
-        // if(mon.listenerCount('identify') ==0 && mon.listenerCount('identTimeout')==0){
-          // mon.once('identTimeout', kill);
-          mon.once('identify', ident);
-          c.once('line', chkQuit);
+				mon.once('identify', ident);
+        c.once('line', chkQuit);
 
-          c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);
-          // c.once('line', coreCmd);
-        // }
-        console.log(`AFTER - identify: ${mon.listenerCount('identify')}, identTimeout: ${mon.listenerCount('identTimeout')}`);
-        // eventually after calling ident more than 1 time, eventNames() has ident & identTimeout still listed			
+        c.tell(` --- Entering Identify on ${mon.name} SubProgram --- \n\t\t -- 'stop' to exit -- \n`);		
         
         break;
       case 'mon-next-id': 
@@ -445,6 +440,37 @@ cliServer.on('conn', (c) => {
           c.once('line', coreCmd);
         });
         break;
+      /*  Used for debugging...
+        case 'loc-add':
+        let locInfo = {}
+
+        c.ask('What is the address of the building in which the Monitor is located?').then( (ans) => {
+          locInfo.addr = ans.trim();
+          return c.ask('Give a name to this location.');
+        })
+        .then( (ans) => {
+          locInfo.name = ans.trim();
+          if (locInfo.name != '' && locInfo.addr != '') {
+            try {
+              let locNextID = Location.nextID();
+              // let loc = new Location(Location.create(locInfo));
+              Location.create(locInfo);
+              c.tell('New location successfully created');
+              // let locGetID = loc.id();
+              //c.tell(`Next locID before adding new loc: ${locNextID}. locID of new loc: ${logGetID}\n`);
+            }
+            catch(err) {
+              c.tell( color.red(err.message));
+            }
+          }
+          else {
+            c.tell('No address given.' + '\n');
+          }
+        }).then( () => {
+          c.once('line', coreCmd );
+        })
+        break;
+        */
       case 'mon-add-info-only':
       //---New code
       let monInfo = {}
@@ -461,8 +487,8 @@ cliServer.on('conn', (c) => {
             let locNextID = Location.nextID();
             // let loc = new Location(Location.create(locInfo));
             Location.create(locInfo);
-            c.tell('New location successfully created')
-            // locs=Location.list();
+            c.tell('New location successfully created');
+            locs=Location.list();
             // let locGetID = loc.id();
             //c.tell(`Next locID before adding new loc: ${locNextID}. locID of new loc: ${logGetID}\n`);
             monInfo.locID = locNextID;
@@ -482,52 +508,52 @@ cliServer.on('conn', (c) => {
       //---End of New Code
         .then( (ans) => {
           monInfo.name = ans;
-          return c.ask('What is the ID of the monitor? (answer help if this doesnt make sense)')
-    })
-    .then( (ans) => {
-          if( ans == 'help' ) {
-            let tut = `\nAll directory references are located within the main bcall directory at ${color.bgBlue.bold(process.env.BCALL_DIR)}\n
-            Until the CLI flasher is fixed, the monitor info needs to be set manually\n
-This involves editing config.h in the directory embedded\n
-You can use the command ${color.bgBlue.bold('"mon-next-id"')} to retrieve the proper id\n
-After editing the file, go to the lib directory (${color.bgBlue.bold('$BCALL_DIR/lib')})\n
-Type ${color.bgBlue.bold('./builder')} to compile the binary\n
-Next make sure that the arduino is connected via usb to this computer\n
-Ensure the arduino is in bootloader mode with two rapid presses to the reset button\n
-Now you need to know the port that the device is on, currently we found ports at:\n`;
-            c.tell(tut);
-            Flasher.findDev().then( (devs) => {
-              tut = `${color.bgBlue.bold(devs)} + \n
-In the future you can use the command ${color.bgBlue.bold('find-devs')} to skip the tutorial and just find the dev\n
-If there are multiple devices shown, try unplugging the arduino and seeing which one disappears\n
-Now you run the flasher (still from the lib directory: ${color.bgBlue('$BCALL_DIR/lib')})\n
-The flasher takes one argument, and that argument is the device the arduino is on\n
-For example, if your device is at /dev/ttyACM1, you would run\n\n
-./flasher /dev/ttyACM1\n\n
-Flashing can be finicky, you may need to try quite a few times \n
-My personal method is to try, wait a half a second, try, wait a second, try, wait 2 seconds, try, etc\n
-If the arduino flashes correctly you will get a printout that doesn\'t end in an error, and the arudino\'s red LED with flash twice.\n
-The arduino will then boot into it\'s normal mode and blink the red LED thrice at a time to signal it is looking to connect to the server\n
-When the arduino is connected to the server, it checks in every 200 ms or so, and you will see the wifi activity happening via the orange LED\n
-Now you can start this process over\n`;
-              c.tell(tut);
-              c.once('line', coreCmd);
-            })
-          }
-          else {
-            monInfo.id = parseInt(ans);
-            try {
-              let m = new Monitor( Monitor.mk(monInfo) );
-              c.tell('Monitor successfuly created\n');
-              monSetup(m);
-              mons = Monitor.list();
-              c.once('line', coreCmd);
-            }
-            catch( err ) { 
-              c.tell( color.red(err.message + '\n') );
-              c.once('line', coreCmd);
-            }
-          }
+          return c.ask(`What is the ID of the monitor? Next available monitor ID is ${Monitor.nextID()}`)
+        })
+        .then( (ans) => {
+              if( ans == 'help' ) {
+                let tut = `\nAll directory references are located within the main bcall directory at ${color.bgBlue.bold(process.env.BCALL_DIR)}\n
+                Until the CLI flasher is fixed, the monitor info needs to be set manually\n
+    This involves editing config.h in the directory embedded\n
+    You can use the command ${color.bgBlue.bold('"mon-next-id"')} to retrieve the proper id\n
+    After editing the file, go to the lib directory (${color.bgBlue.bold('$BCALL_DIR/lib')})\n
+    Type ${color.bgBlue.bold('./builder')} to compile the binary\n
+    Next make sure that the arduino is connected via usb to this computer\n
+    Ensure the arduino is in bootloader mode with two rapid presses to the reset button\n
+    Now you need to know the port that the device is on, currently we found ports at:\n`;
+                c.tell(tut);
+                Flasher.findDev().then( (devs) => {
+                  tut = `${color.bgBlue.bold(devs)} + \n
+    In the future you can use the command ${color.bgBlue.bold('find-devs')} to skip the tutorial and just find the dev\n
+    If there are multiple devices shown, try unplugging the arduino and seeing which one disappears\n
+    Now you run the flasher (still from the lib directory: ${color.bgBlue('$BCALL_DIR/lib')})\n
+    The flasher takes one argument, and that argument is the device the arduino is on\n
+    For example, if your device is at /dev/ttyACM1, you would run\n\n
+    ./flasher /dev/ttyACM1\n\n
+    Flashing can be finicky, you may need to try quite a few times \n
+    My personal method is to try, wait a half a second, try, wait a second, try, wait 2 seconds, try, etc\n
+    If the arduino flashes correctly you will get a printout that doesn\'t end in an error, and the arudino\'s red LED with flash twice.\n
+    The arduino will then boot into it\'s normal mode and blink the red LED thrice at a time to signal it is looking to connect to the server\n
+    When the arduino is connected to the server, it checks in every 200 ms or so, and you will see the wifi activity happening via the orange LED\n
+    Now you can start this process over\n`;
+                  c.tell(tut);
+                  c.once('line', coreCmd);
+                })
+              }
+              else {
+                monInfo.id = parseInt(ans);
+                try {
+                  let m = new Monitor( Monitor.mk(monInfo) );
+                  c.tell('Monitor successfuly created\n');
+                  monSetup(m);
+                  mons = Monitor.list();
+                  c.once('line', coreCmd);
+                }
+                catch( err ) { 
+                  c.tell( color.red(err.message + '\n') );
+                  c.once('line', coreCmd);
+                }
+              }
         });
         break;
       default: c.once('line', coreCmd);

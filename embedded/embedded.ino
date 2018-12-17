@@ -6,7 +6,7 @@
 //QList<char*> commList;
 WiFiClient client;
 int const NUMPINS = 16;
-int pinNums[] = {0,1,5,6,9,10,11,12,14,15,16,17,18,19,20,21};
+int pinNums[] = {0,1,5,6,9,10,11,12,14,15,16,17,18,19,20,21}; // use 9 & 13 at your discretion, look at pinout & adafruit website for more details
 String myMAC = "";
 const unsigned long checkinInterval = 1000;
 unsigned long lastCheckin = 0;

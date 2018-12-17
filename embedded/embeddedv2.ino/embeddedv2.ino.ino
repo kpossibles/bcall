@@ -5,8 +5,8 @@
 
 //QList<char*> commList;
 WiFiClient client;
-int const NUMPINS = 11;
-int pinNums[] = {0,1,5,6,15,16,17,18,19,20,21};
+int const NUMPINS = 16;
+int pinNums[] = {0,1,5,6,9,10,11,12,13,15,16,17,18,19,20,21};
 String myMAC = "";
 const unsigned long checkinInterval = 1000;
 unsigned long lastCheckin = 0;

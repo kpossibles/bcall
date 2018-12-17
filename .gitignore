@@ -2,3 +2,6 @@ node_modules/*
 *.sw*
 *.db
 bcall.db
+lib/arduino-1.8.6/portable/preferences.txt
+.directory
+export/*
